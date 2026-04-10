@@ -28,6 +28,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/userattributedefinition"
 	"github.com/Wei-Shaw/sub2api/ent/userattributevalue"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
+	"github.com/Wei-Shaw/sub2api/internal/domain"
 )
 
 // The init function reads all schema descriptors with runtime code
@@ -446,24 +447,28 @@ func init() {
 	groupDescSupportedModelScopes := groupFields[20].Descriptor()
 	// group.DefaultSupportedModelScopes holds the default value on creation for the supported_model_scopes field.
 	group.DefaultSupportedModelScopes = groupDescSupportedModelScopes.Default.([]string)
+	// groupDescPromptPolicy is the schema descriptor for prompt_policy field.
+	groupDescPromptPolicy := groupFields[21].Descriptor()
+	// group.DefaultPromptPolicy holds the default value on creation for the prompt_policy field.
+	group.DefaultPromptPolicy = groupDescPromptPolicy.Default.(domain.PromptPolicy)
 	// groupDescSortOrder is the schema descriptor for sort_order field.
-	groupDescSortOrder := groupFields[21].Descriptor()
+	groupDescSortOrder := groupFields[22].Descriptor()
 	// group.DefaultSortOrder holds the default value on creation for the sort_order field.
 	group.DefaultSortOrder = groupDescSortOrder.Default.(int)
 	// groupDescAllowMessagesDispatch is the schema descriptor for allow_messages_dispatch field.
-	groupDescAllowMessagesDispatch := groupFields[22].Descriptor()
+	groupDescAllowMessagesDispatch := groupFields[23].Descriptor()
 	// group.DefaultAllowMessagesDispatch holds the default value on creation for the allow_messages_dispatch field.
 	group.DefaultAllowMessagesDispatch = groupDescAllowMessagesDispatch.Default.(bool)
 	// groupDescRequireOauthOnly is the schema descriptor for require_oauth_only field.
-	groupDescRequireOauthOnly := groupFields[23].Descriptor()
+	groupDescRequireOauthOnly := groupFields[24].Descriptor()
 	// group.DefaultRequireOauthOnly holds the default value on creation for the require_oauth_only field.
 	group.DefaultRequireOauthOnly = groupDescRequireOauthOnly.Default.(bool)
 	// groupDescRequirePrivacySet is the schema descriptor for require_privacy_set field.
-	groupDescRequirePrivacySet := groupFields[24].Descriptor()
+	groupDescRequirePrivacySet := groupFields[25].Descriptor()
 	// group.DefaultRequirePrivacySet holds the default value on creation for the require_privacy_set field.
 	group.DefaultRequirePrivacySet = groupDescRequirePrivacySet.Default.(bool)
 	// groupDescDefaultMappedModel is the schema descriptor for default_mapped_model field.
-	groupDescDefaultMappedModel := groupFields[25].Descriptor()
+	groupDescDefaultMappedModel := groupFields[26].Descriptor()
 	// group.DefaultDefaultMappedModel holds the default value on creation for the default_mapped_model field.
 	group.DefaultDefaultMappedModel = groupDescDefaultMappedModel.Default.(string)
 	// group.DefaultMappedModelValidator is a validator for the "default_mapped_model" field. It is called by the builders before save.

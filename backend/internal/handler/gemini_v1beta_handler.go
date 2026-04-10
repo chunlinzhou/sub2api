@@ -180,6 +180,13 @@ func (h *GatewayHandler) GeminiV1BetaModels(c *gin.Context) {
 		googleError(c, http.StatusBadRequest, "Request body is empty")
 		return
 	}
+	if apiKey.Group != nil {
+		body, err = service.ApplyGroupPromptPolicy(body, apiKey.Group, service.PromptPolicyTargetGemini)
+		if err != nil {
+			googleError(c, http.StatusBadRequest, "Failed to apply group prompt policy")
+			return
+		}
+	}
 
 	setOpsRequestContext(c, modelName, stream, body)
 	setOpsEndpointContext(c, "", int16(service.RequestTypeFromLegacy(stream, false)))

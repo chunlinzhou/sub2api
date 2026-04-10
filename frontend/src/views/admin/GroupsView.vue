@@ -288,6 +288,136 @@
             :placeholder="t('admin.groups.optionalDescription')"
           ></textarea>
         </div>
+        <div class="rounded-xl border border-gray-200 p-4 dark:border-dark-600">
+          <div class="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">统一 Prompt 模板</label>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                按分组统一注入到 Anthropic/OpenAI/Gemini 请求
+              </p>
+            </div>
+            <button
+              type="button"
+              @click="createForm.prompt_policy.enabled = !createForm.prompt_policy.enabled"
+              :class="[
+                'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+                createForm.prompt_policy.enabled ? 'bg-primary-500' : 'bg-gray-300 dark:bg-dark-600'
+              ]"
+            >
+              <span
+                :class="[
+                  'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                  createForm.prompt_policy.enabled ? 'translate-x-6' : 'translate-x-1'
+                ]"
+              />
+            </button>
+          </div>
+          <div v-if="createForm.prompt_policy.enabled" class="space-y-3">
+            <div>
+              <label class="input-label">注入模式</label>
+              <Select
+                v-model="createForm.prompt_policy.mode"
+                :options="[
+                  { value: 'prepend', label: '前置注入' },
+                  { value: 'append', label: '后置追加' },
+                  { value: 'replace_if_empty', label: '仅在为空时注入' }
+                ]"
+              />
+            </div>
+            <div>
+              <label class="input-label">本地 Skills（可多选）</label>
+              <p class="mb-2 text-xs text-gray-500 dark:text-gray-400">
+                读取服务端 `DATA_DIR/skills` 目录下的 `.md` / `.txt` 文件，按勾选顺序拼接注入
+              </p>
+              <div
+                v-if="localSkillsLoading"
+                class="rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 dark:border-dark-600 dark:text-gray-400"
+              >
+                正在加载本地 skills...
+              </div>
+              <div
+                v-else-if="!localSkills.length"
+                class="rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 dark:border-dark-600 dark:text-gray-400"
+              >
+                当前未发现本地 skill 文件，可先在服务端 `DATA_DIR/skills` 下放入 `.md` / `.txt` 文件
+              </div>
+              <div
+                v-else
+                class="max-h-48 space-y-2 overflow-y-auto rounded-lg border border-gray-200 p-3 dark:border-dark-600"
+              >
+                <label
+                  v-for="skill in localSkills"
+                  :key="skill.id"
+                  class="flex cursor-pointer items-start gap-3 rounded-lg px-2 py-1 hover:bg-gray-50 dark:hover:bg-dark-700"
+                >
+                  <input
+                    v-model="createForm.prompt_policy.skill_ids"
+                    :value="skill.id"
+                    type="checkbox"
+                    class="mt-1 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
+                  />
+                  <div class="min-w-0">
+                    <div class="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {{ skill.name }}
+                    </div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                      {{ skill.filename }}
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+            <div>
+              <label class="input-label">强制模式</label>
+              <Select
+                v-model="createForm.prompt_policy.skill_enforcement_mode"
+                :options="[
+                  { value: 'soft', label: 'soft（仅注入）' },
+                  { value: 'strict', label: 'strict（清理用户高优先级指令）' }
+                ]"
+              />
+              <p class="input-hint">
+                strict 会清理用户自带的 system / developer / instructions / systemInstruction，再注入统一模板
+              </p>
+            </div>
+            <div>
+              <label class="input-label">Anthropic system</label>
+              <textarea
+                v-model="createForm.prompt_policy.anthropic_system_message"
+                rows="3"
+                class="input"
+                placeholder="用于 /v1/messages 的 system 注入"
+              ></textarea>
+            </div>
+            <div>
+              <label class="input-label">OpenAI instructions / developer</label>
+              <textarea
+                v-model="createForm.prompt_policy.openai_instructions"
+                rows="3"
+                class="input"
+                placeholder="Responses 写入 instructions，Chat Completions 注入 developer 消息"
+              ></textarea>
+            </div>
+            <div>
+              <label class="input-label">Gemini systemInstruction</label>
+              <textarea
+                v-model="createForm.prompt_policy.gemini_system_instruction"
+                rows="3"
+                class="input"
+                placeholder="用于 Gemini native 请求的 systemInstruction 注入"
+              ></textarea>
+            </div>
+            <div>
+              <label class="input-label">备注</label>
+              <input
+                v-model="createForm.prompt_policy.notes"
+                type="text"
+                class="input"
+                placeholder="例如：团队统一编码规范 v1"
+              />
+            </div>
+          </div>
+        </div>
         <div>
           <label class="input-label">{{ t('admin.groups.form.platform') }}</label>
           <Select
@@ -997,6 +1127,136 @@
         <div>
           <label class="input-label">{{ t('admin.groups.form.description') }}</label>
           <textarea v-model="editForm.description" rows="3" class="input"></textarea>
+        </div>
+        <div class="rounded-xl border border-gray-200 p-4 dark:border-dark-600">
+          <div class="mb-3 flex items-center justify-between gap-3">
+            <div>
+              <label class="text-sm font-medium text-gray-700 dark:text-gray-300">统一 Prompt 模板</label>
+              <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                按分组统一注入到 Anthropic/OpenAI/Gemini 请求
+              </p>
+            </div>
+            <button
+              type="button"
+              @click="editForm.prompt_policy.enabled = !editForm.prompt_policy.enabled"
+              :class="[
+                'relative inline-flex h-6 w-11 items-center rounded-full transition-colors',
+                editForm.prompt_policy.enabled ? 'bg-primary-500' : 'bg-gray-300 dark:bg-dark-600'
+              ]"
+            >
+              <span
+                :class="[
+                  'inline-block h-4 w-4 transform rounded-full bg-white transition-transform',
+                  editForm.prompt_policy.enabled ? 'translate-x-6' : 'translate-x-1'
+                ]"
+              />
+            </button>
+          </div>
+          <div v-if="editForm.prompt_policy.enabled" class="space-y-3">
+            <div>
+              <label class="input-label">注入模式</label>
+              <Select
+                v-model="editForm.prompt_policy.mode"
+                :options="[
+                  { value: 'prepend', label: '前置注入' },
+                  { value: 'append', label: '后置追加' },
+                  { value: 'replace_if_empty', label: '仅在为空时注入' }
+                ]"
+              />
+            </div>
+            <div>
+              <label class="input-label">本地 Skills（可多选）</label>
+              <p class="mb-2 text-xs text-gray-500 dark:text-gray-400">
+                读取服务端 `DATA_DIR/skills` 目录下的 `.md` / `.txt` 文件，按勾选顺序拼接注入
+              </p>
+              <div
+                v-if="localSkillsLoading"
+                class="rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 dark:border-dark-600 dark:text-gray-400"
+              >
+                正在加载本地 skills...
+              </div>
+              <div
+                v-else-if="!localSkills.length"
+                class="rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 dark:border-dark-600 dark:text-gray-400"
+              >
+                当前未发现本地 skill 文件，可先在服务端 `DATA_DIR/skills` 下放入 `.md` / `.txt` 文件
+              </div>
+              <div
+                v-else
+                class="max-h-48 space-y-2 overflow-y-auto rounded-lg border border-gray-200 p-3 dark:border-dark-600"
+              >
+                <label
+                  v-for="skill in localSkills"
+                  :key="skill.id"
+                  class="flex cursor-pointer items-start gap-3 rounded-lg px-2 py-1 hover:bg-gray-50 dark:hover:bg-dark-700"
+                >
+                  <input
+                    v-model="editForm.prompt_policy.skill_ids"
+                    :value="skill.id"
+                    type="checkbox"
+                    class="mt-1 rounded border-gray-300 text-primary-500 focus:ring-primary-500"
+                  />
+                  <div class="min-w-0">
+                    <div class="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {{ skill.name }}
+                    </div>
+                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                      {{ skill.filename }}
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+            <div>
+              <label class="input-label">强制模式</label>
+              <Select
+                v-model="editForm.prompt_policy.skill_enforcement_mode"
+                :options="[
+                  { value: 'soft', label: 'soft（仅注入）' },
+                  { value: 'strict', label: 'strict（清理用户高优先级指令）' }
+                ]"
+              />
+              <p class="input-hint">
+                strict 会清理用户自带的 system / developer / instructions / systemInstruction，再注入统一模板
+              </p>
+            </div>
+            <div>
+              <label class="input-label">Anthropic system</label>
+              <textarea
+                v-model="editForm.prompt_policy.anthropic_system_message"
+                rows="3"
+                class="input"
+                placeholder="用于 /v1/messages 的 system 注入"
+              ></textarea>
+            </div>
+            <div>
+              <label class="input-label">OpenAI instructions / developer</label>
+              <textarea
+                v-model="editForm.prompt_policy.openai_instructions"
+                rows="3"
+                class="input"
+                placeholder="Responses 写入 instructions，Chat Completions 注入 developer 消息"
+              ></textarea>
+            </div>
+            <div>
+              <label class="input-label">Gemini systemInstruction</label>
+              <textarea
+                v-model="editForm.prompt_policy.gemini_system_instruction"
+                rows="3"
+                class="input"
+                placeholder="用于 Gemini native 请求的 systemInstruction 注入"
+              ></textarea>
+            </div>
+            <div>
+              <label class="input-label">备注</label>
+              <input
+                v-model="editForm.prompt_policy.notes"
+                type="text"
+                class="input"
+                placeholder="例如：团队统一编码规范 v1"
+              />
+            </div>
+          </div>
         </div>
         <div>
           <label class="input-label">{{ t('admin.groups.form.platform') }}</label>
@@ -1802,7 +2062,7 @@ import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
 import { useOnboardingStore } from '@/stores/onboarding'
 import { adminAPI } from '@/api/admin'
-import type { AdminGroup, GroupPlatform, SubscriptionType } from '@/types'
+import type { AdminGroup, GroupPlatform, SubscriptionType, PromptPolicy, LocalSkillSummary } from '@/types'
 import type { Column } from '@/components/common/types'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import TablePageLayout from '@/components/layout/TablePageLayout.vue'
@@ -1997,6 +2257,31 @@ const deletingGroup = ref<AdminGroup | null>(null)
 const showRateMultipliersModal = ref(false)
 const rateMultipliersGroup = ref<AdminGroup | null>(null)
 const sortableGroups = ref<AdminGroup[]>([])
+const localSkills = ref<LocalSkillSummary[]>([])
+const localSkillsLoading = ref(false)
+
+const buildDefaultPromptPolicy = (): PromptPolicy => ({
+  enabled: false,
+  mode: 'prepend',
+  skill_ids: [],
+  skill_enforcement_mode: 'soft',
+  anthropic_system_message: '',
+  openai_instructions: '',
+  gemini_system_instruction: '',
+  notes: ''
+})
+
+const loadLocalSkills = async () => {
+  localSkillsLoading.value = true
+  try {
+    localSkills.value = await adminAPI.groups.listLocalSkills()
+  } catch (error) {
+    console.error('Error loading local skills:', error)
+    appStore.showError('加载本地 skills 失败')
+  } finally {
+    localSkillsLoading.value = false
+  }
+}
 
 const createForm = reactive({
   name: '',
@@ -2028,6 +2313,7 @@ const createForm = reactive({
   supported_model_scopes: ['claude', 'gemini_text', 'gemini_image'] as string[],
   // MCP XML 协议注入开关（仅 antigravity 平台）
   mcp_xml_inject: true,
+  prompt_policy: buildDefaultPromptPolicy(),
   // 从分组复制账号
   copy_accounts_from_group_ids: [] as number[]
 })
@@ -2269,6 +2555,7 @@ const editForm = reactive({
   supported_model_scopes: ['claude', 'gemini_text', 'gemini_image'] as string[],
   // MCP XML 协议注入开关（仅 antigravity 平台）
   mcp_xml_inject: true,
+  prompt_policy: buildDefaultPromptPolicy(),
   // 从分组复制账号
   copy_accounts_from_group_ids: [] as number[]
 })
@@ -2408,6 +2695,7 @@ const closeCreateModal = () => {
   createForm.default_mapped_model = 'gpt-5.4'
   createForm.supported_model_scopes = ['claude', 'gemini_text', 'gemini_image']
   createForm.mcp_xml_inject = true
+  createForm.prompt_policy = buildDefaultPromptPolicy()
   createForm.copy_accounts_from_group_ids = []
   createModelRoutingRules.value = []
 }
@@ -2491,6 +2779,10 @@ const handleEdit = async (group: AdminGroup) => {
   editForm.model_routing_enabled = group.model_routing_enabled || false
   editForm.supported_model_scopes = group.supported_model_scopes || ['claude', 'gemini_text', 'gemini_image']
   editForm.mcp_xml_inject = group.mcp_xml_inject ?? true
+  editForm.prompt_policy = {
+    ...buildDefaultPromptPolicy(),
+    ...(group.prompt_policy || {})
+  }
   editForm.copy_accounts_from_group_ids = [] // 复制账号字段每次编辑时重置为空
   // 加载模型路由规则（异步加载账号名称）
   editModelRoutingRules.value = await convertApiFormatToRoutingRules(group.model_routing)
@@ -2505,6 +2797,7 @@ const closeEditModal = () => {
   showEditModal.value = false
   editingGroup.value = null
   editModelRoutingRules.value = []
+  editForm.prompt_policy = buildDefaultPromptPolicy()
   editForm.copy_accounts_from_group_ids = []
 }
 
@@ -2653,6 +2946,7 @@ const saveSortOrder = async () => {
 
 onMounted(() => {
   loadGroups()
+  loadLocalSkills()
   document.addEventListener('click', handleClickOutside)
 })
 

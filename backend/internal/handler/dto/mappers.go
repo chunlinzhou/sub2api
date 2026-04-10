@@ -138,6 +138,7 @@ func GroupFromServiceAdmin(g *service.Group) *AdminGroup {
 		ModelRoutingEnabled:     g.ModelRoutingEnabled,
 		MCPXMLInject:            g.MCPXMLInject,
 		DefaultMappedModel:      g.DefaultMappedModel,
+		PromptPolicy:            g.PromptPolicy,
 		SupportedModelScopes:    g.SupportedModelScopes,
 		AccountCount:            g.AccountCount,
 		ActiveAccountCount:      g.ActiveAccountCount,

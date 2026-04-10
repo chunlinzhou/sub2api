@@ -8,6 +8,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
+	"github.com/Wei-Shaw/sub2api/internal/domain"
 )
 
 const (
@@ -63,6 +64,8 @@ const (
 	FieldMcpXMLInject = "mcp_xml_inject"
 	// FieldSupportedModelScopes holds the string denoting the supported_model_scopes field in the database.
 	FieldSupportedModelScopes = "supported_model_scopes"
+	// FieldPromptPolicy holds the string denoting the prompt_policy field in the database.
+	FieldPromptPolicy = "prompt_policy"
 	// FieldSortOrder holds the string denoting the sort_order field in the database.
 	FieldSortOrder = "sort_order"
 	// FieldAllowMessagesDispatch holds the string denoting the allow_messages_dispatch field in the database.
@@ -172,6 +175,7 @@ var Columns = []string{
 	FieldModelRoutingEnabled,
 	FieldMcpXMLInject,
 	FieldSupportedModelScopes,
+	FieldPromptPolicy,
 	FieldSortOrder,
 	FieldAllowMessagesDispatch,
 	FieldRequireOauthOnly,
@@ -240,6 +244,8 @@ var (
 	DefaultMcpXMLInject bool
 	// DefaultSupportedModelScopes holds the default value on creation for the "supported_model_scopes" field.
 	DefaultSupportedModelScopes []string
+	// DefaultPromptPolicy holds the default value on creation for the "prompt_policy" field.
+	DefaultPromptPolicy domain.PromptPolicy
 	// DefaultSortOrder holds the default value on creation for the "sort_order" field.
 	DefaultSortOrder int
 	// DefaultAllowMessagesDispatch holds the default value on creation for the "allow_messages_dispatch" field.

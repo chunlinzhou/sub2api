@@ -20,6 +20,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/usagelog"
 	"github.com/Wei-Shaw/sub2api/ent/user"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
+	"github.com/Wei-Shaw/sub2api/internal/domain"
 )
 
 // GroupUpdate is the builder for updating Group entities.
@@ -472,6 +473,20 @@ func (_u *GroupUpdate) SetSupportedModelScopes(v []string) *GroupUpdate {
 // AppendSupportedModelScopes appends value to the "supported_model_scopes" field.
 func (_u *GroupUpdate) AppendSupportedModelScopes(v []string) *GroupUpdate {
 	_u.mutation.AppendSupportedModelScopes(v)
+	return _u
+}
+
+// SetPromptPolicy sets the "prompt_policy" field.
+func (_u *GroupUpdate) SetPromptPolicy(v domain.PromptPolicy) *GroupUpdate {
+	_u.mutation.SetPromptPolicy(v)
+	return _u
+}
+
+// SetNillablePromptPolicy sets the "prompt_policy" field if the given value is not nil.
+func (_u *GroupUpdate) SetNillablePromptPolicy(v *domain.PromptPolicy) *GroupUpdate {
+	if v != nil {
+		_u.SetPromptPolicy(*v)
+	}
 	return _u
 }
 
@@ -993,6 +1008,9 @@ func (_u *GroupUpdate) sqlSave(ctx context.Context) (_node int, err error) {
 		_spec.AddModifier(func(u *sql.UpdateBuilder) {
 			sqljson.Append(u, group.FieldSupportedModelScopes, value)
 		})
+	}
+	if value, ok := _u.mutation.PromptPolicy(); ok {
+		_spec.SetField(group.FieldPromptPolicy, field.TypeJSON, value)
 	}
 	if value, ok := _u.mutation.SortOrder(); ok {
 		_spec.SetField(group.FieldSortOrder, field.TypeInt, value)
@@ -1766,6 +1784,20 @@ func (_u *GroupUpdateOne) AppendSupportedModelScopes(v []string) *GroupUpdateOne
 	return _u
 }
 
+// SetPromptPolicy sets the "prompt_policy" field.
+func (_u *GroupUpdateOne) SetPromptPolicy(v domain.PromptPolicy) *GroupUpdateOne {
+	_u.mutation.SetPromptPolicy(v)
+	return _u
+}
+
+// SetNillablePromptPolicy sets the "prompt_policy" field if the given value is not nil.
+func (_u *GroupUpdateOne) SetNillablePromptPolicy(v *domain.PromptPolicy) *GroupUpdateOne {
+	if v != nil {
+		_u.SetPromptPolicy(*v)
+	}
+	return _u
+}
+
 // SetSortOrder sets the "sort_order" field.
 func (_u *GroupUpdateOne) SetSortOrder(v int) *GroupUpdateOne {
 	_u.mutation.ResetSortOrder()
@@ -2314,6 +2346,9 @@ func (_u *GroupUpdateOne) sqlSave(ctx context.Context) (_node *Group, err error)
 		_spec.AddModifier(func(u *sql.UpdateBuilder) {
 			sqljson.Append(u, group.FieldSupportedModelScopes, value)
 		})
+	}
+	if value, ok := _u.mutation.PromptPolicy(); ok {
+		_spec.SetField(group.FieldPromptPolicy, field.TypeJSON, value)
 	}
 	if value, ok := _u.mutation.SortOrder(); ok {
 		_spec.SetField(group.FieldSortOrder, field.TypeInt, value)

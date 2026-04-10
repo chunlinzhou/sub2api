@@ -122,6 +122,12 @@ func (Group) Fields() []ent.Field {
 			SchemaType(map[string]string{dialect.Postgres: "jsonb"}).
 			Comment("支持的模型系列：claude, gemini_text, gemini_image"),
 
+		// 分组级 Prompt 模板注入策略
+		field.JSON("prompt_policy", domain.PromptPolicy{}).
+			Default(domain.PromptPolicy{}).
+			SchemaType(map[string]string{dialect.Postgres: "jsonb"}).
+			Comment("分组级 prompt 模板注入策略"),
+
 		// 分组排序 (added by migration 052)
 		field.Int("sort_order").
 			Default(0).

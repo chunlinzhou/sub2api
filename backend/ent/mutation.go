@@ -8240,6 +8240,7 @@ type GroupMutation struct {
 	mcp_xml_inject                          *bool
 	supported_model_scopes                  *[]string
 	appendsupported_model_scopes            []string
+	prompt_policy                           *domain.PromptPolicy
 	sort_order                              *int
 	addsort_order                           *int
 	allow_messages_dispatch                 *bool
@@ -9598,6 +9599,42 @@ func (m *GroupMutation) ResetSupportedModelScopes() {
 	m.appendsupported_model_scopes = nil
 }
 
+// SetPromptPolicy sets the "prompt_policy" field.
+func (m *GroupMutation) SetPromptPolicy(dp domain.PromptPolicy) {
+	m.prompt_policy = &dp
+}
+
+// PromptPolicy returns the value of the "prompt_policy" field in the mutation.
+func (m *GroupMutation) PromptPolicy() (r domain.PromptPolicy, exists bool) {
+	v := m.prompt_policy
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldPromptPolicy returns the old "prompt_policy" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldPromptPolicy(ctx context.Context) (v domain.PromptPolicy, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldPromptPolicy is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldPromptPolicy requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldPromptPolicy: %w", err)
+	}
+	return oldValue.PromptPolicy, nil
+}
+
+// ResetPromptPolicy resets all changes to the "prompt_policy" field.
+func (m *GroupMutation) ResetPromptPolicy() {
+	m.prompt_policy = nil
+}
+
 // SetSortOrder sets the "sort_order" field.
 func (m *GroupMutation) SetSortOrder(i int) {
 	m.sort_order = &i
@@ -10156,7 +10193,7 @@ func (m *GroupMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *GroupMutation) Fields() []string {
-	fields := make([]string, 0, 29)
+	fields := make([]string, 0, 30)
 	if m.created_at != nil {
 		fields = append(fields, group.FieldCreatedAt)
 	}
@@ -10229,6 +10266,9 @@ func (m *GroupMutation) Fields() []string {
 	if m.supported_model_scopes != nil {
 		fields = append(fields, group.FieldSupportedModelScopes)
 	}
+	if m.prompt_policy != nil {
+		fields = append(fields, group.FieldPromptPolicy)
+	}
 	if m.sort_order != nil {
 		fields = append(fields, group.FieldSortOrder)
 	}
@@ -10300,6 +10340,8 @@ func (m *GroupMutation) Field(name string) (ent.Value, bool) {
 		return m.McpXMLInject()
 	case group.FieldSupportedModelScopes:
 		return m.SupportedModelScopes()
+	case group.FieldPromptPolicy:
+		return m.PromptPolicy()
 	case group.FieldSortOrder:
 		return m.SortOrder()
 	case group.FieldAllowMessagesDispatch:
@@ -10367,6 +10409,8 @@ func (m *GroupMutation) OldField(ctx context.Context, name string) (ent.Value, e
 		return m.OldMcpXMLInject(ctx)
 	case group.FieldSupportedModelScopes:
 		return m.OldSupportedModelScopes(ctx)
+	case group.FieldPromptPolicy:
+		return m.OldPromptPolicy(ctx)
 	case group.FieldSortOrder:
 		return m.OldSortOrder(ctx)
 	case group.FieldAllowMessagesDispatch:
@@ -10553,6 +10597,13 @@ func (m *GroupMutation) SetField(name string, value ent.Value) error {
 			return fmt.Errorf("unexpected type %T for field %s", value, name)
 		}
 		m.SetSupportedModelScopes(v)
+		return nil
+	case group.FieldPromptPolicy:
+		v, ok := value.(domain.PromptPolicy)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetPromptPolicy(v)
 		return nil
 	case group.FieldSortOrder:
 		v, ok := value.(int)
@@ -10913,6 +10964,9 @@ func (m *GroupMutation) ResetField(name string) error {
 		return nil
 	case group.FieldSupportedModelScopes:
 		m.ResetSupportedModelScopes()
+		return nil
+	case group.FieldPromptPolicy:
+		m.ResetPromptPolicy()
 		return nil
 	case group.FieldSortOrder:
 		m.ResetSortOrder()

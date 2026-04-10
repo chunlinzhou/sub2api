@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"github.com/Wei-Shaw/sub2api/ent/group"
+	"github.com/Wei-Shaw/sub2api/internal/domain"
 )
 
 // Group is the model entity for the Group schema.
@@ -66,6 +67,8 @@ type Group struct {
 	McpXMLInject bool `json:"mcp_xml_inject,omitempty"`
 	// 支持的模型系列：claude, gemini_text, gemini_image
 	SupportedModelScopes []string `json:"supported_model_scopes,omitempty"`
+	// 分组级 prompt 模板注入策略
+	PromptPolicy domain.PromptPolicy `json:"prompt_policy,omitempty"`
 	// 分组显示排序，数值越小越靠前
 	SortOrder int `json:"sort_order,omitempty"`
 	// 是否允许 /v1/messages 调度到此 OpenAI 分组
@@ -182,7 +185,7 @@ func (*Group) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case group.FieldModelRouting, group.FieldSupportedModelScopes:
+		case group.FieldModelRouting, group.FieldSupportedModelScopes, group.FieldPromptPolicy:
 			values[i] = new([]byte)
 		case group.FieldIsExclusive, group.FieldClaudeCodeOnly, group.FieldModelRoutingEnabled, group.FieldMcpXMLInject, group.FieldAllowMessagesDispatch, group.FieldRequireOauthOnly, group.FieldRequirePrivacySet:
 			values[i] = new(sql.NullBool)
@@ -371,6 +374,14 @@ func (_m *Group) assignValues(columns []string, values []any) error {
 			} else if value != nil && len(*value) > 0 {
 				if err := json.Unmarshal(*value, &_m.SupportedModelScopes); err != nil {
 					return fmt.Errorf("unmarshal field supported_model_scopes: %w", err)
+				}
+			}
+		case group.FieldPromptPolicy:
+			if value, ok := values[i].(*[]byte); !ok {
+				return fmt.Errorf("unexpected type %T for field prompt_policy", values[i])
+			} else if value != nil && len(*value) > 0 {
+				if err := json.Unmarshal(*value, &_m.PromptPolicy); err != nil {
+					return fmt.Errorf("unmarshal field prompt_policy: %w", err)
 				}
 			}
 		case group.FieldSortOrder:
@@ -570,6 +581,9 @@ func (_m *Group) String() string {
 	builder.WriteString(", ")
 	builder.WriteString("supported_model_scopes=")
 	builder.WriteString(fmt.Sprintf("%v", _m.SupportedModelScopes))
+	builder.WriteString(", ")
+	builder.WriteString("prompt_policy=")
+	builder.WriteString(fmt.Sprintf("%v", _m.PromptPolicy))
 	builder.WriteString(", ")
 	builder.WriteString("sort_order=")
 	builder.WriteString(fmt.Sprintf("%v", _m.SortOrder))

@@ -9,7 +9,8 @@ import type {
   GroupPlatform,
   CreateGroupRequest,
   UpdateGroupRequest,
-  PaginatedResponse
+  PaginatedResponse,
+  LocalSkillSummary
 } from '@/types'
 
 /**
@@ -52,6 +53,11 @@ export async function getAll(platform?: GroupPlatform): Promise<AdminGroup[]> {
   const { data } = await apiClient.get<AdminGroup[]>('/admin/groups/all', {
     params: platform ? { platform } : undefined
   })
+  return data
+}
+
+export async function listLocalSkills(): Promise<LocalSkillSummary[]> {
+  const { data } = await apiClient.get<LocalSkillSummary[]>('/admin/groups/local-skills')
   return data
 }
 
@@ -249,6 +255,7 @@ export async function getCapacitySummary(): Promise<
 export const groupsAPI = {
   list,
   getAll,
+  listLocalSkills,
   getByPlatform,
   getById,
   create,

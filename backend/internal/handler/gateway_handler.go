@@ -146,6 +146,13 @@ func (h *GatewayHandler) Messages(c *gin.Context) {
 		h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Request body is empty")
 		return
 	}
+	if apiKey.Group != nil {
+		body, err = service.ApplyGroupPromptPolicy(body, apiKey.Group, service.PromptPolicyTargetAnthropic)
+		if err != nil {
+			h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to apply group prompt policy")
+			return
+		}
+	}
 
 	setOpsRequestContext(c, "", false, body)
 

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
+	"github.com/Wei-Shaw/sub2api/internal/domain"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/httpclient"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
@@ -151,6 +152,7 @@ type CreateGroupInput struct {
 	MCPXMLInject        *bool
 	// 支持的模型系列（仅 antigravity 平台使用）
 	SupportedModelScopes []string
+	PromptPolicy         domain.PromptPolicy
 	// OpenAI Messages 调度配置（仅 openai 平台使用）
 	AllowMessagesDispatch bool
 	DefaultMappedModel    string
@@ -185,6 +187,7 @@ type UpdateGroupInput struct {
 	MCPXMLInject        *bool
 	// 支持的模型系列（仅 antigravity 平台使用）
 	SupportedModelScopes *[]string
+	PromptPolicy         *domain.PromptPolicy
 	// OpenAI Messages 调度配置（仅 openai 平台使用）
 	AllowMessagesDispatch *bool
 	DefaultMappedModel    *string
@@ -904,6 +907,7 @@ func (s *adminServiceImpl) CreateGroup(ctx context.Context, input *CreateGroupIn
 		ModelRouting:                    input.ModelRouting,
 		MCPXMLInject:                    mcpXMLInject,
 		SupportedModelScopes:            input.SupportedModelScopes,
+		PromptPolicy:                    domain.NormalizePromptPolicy(input.PromptPolicy),
 		AllowMessagesDispatch:           input.AllowMessagesDispatch,
 		RequireOAuthOnly:                input.RequireOAuthOnly,
 		RequirePrivacySet:               input.RequirePrivacySet,
@@ -1120,6 +1124,9 @@ func (s *adminServiceImpl) UpdateGroup(ctx context.Context, id int64, input *Upd
 	// 支持的模型系列（仅 antigravity 平台使用）
 	if input.SupportedModelScopes != nil {
 		group.SupportedModelScopes = *input.SupportedModelScopes
+	}
+	if input.PromptPolicy != nil {
+		group.PromptPolicy = domain.NormalizePromptPolicy(*input.PromptPolicy)
 	}
 
 	// OpenAI Messages 调度配置

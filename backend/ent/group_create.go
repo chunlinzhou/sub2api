@@ -18,6 +18,7 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/usagelog"
 	"github.com/Wei-Shaw/sub2api/ent/user"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
+	"github.com/Wei-Shaw/sub2api/internal/domain"
 )
 
 // GroupCreate is the builder for creating a Group entity.
@@ -340,6 +341,20 @@ func (_c *GroupCreate) SetSupportedModelScopes(v []string) *GroupCreate {
 	return _c
 }
 
+// SetPromptPolicy sets the "prompt_policy" field.
+func (_c *GroupCreate) SetPromptPolicy(v domain.PromptPolicy) *GroupCreate {
+	_c.mutation.SetPromptPolicy(v)
+	return _c
+}
+
+// SetNillablePromptPolicy sets the "prompt_policy" field if the given value is not nil.
+func (_c *GroupCreate) SetNillablePromptPolicy(v *domain.PromptPolicy) *GroupCreate {
+	if v != nil {
+		_c.SetPromptPolicy(*v)
+	}
+	return _c
+}
+
 // SetSortOrder sets the "sort_order" field.
 func (_c *GroupCreate) SetSortOrder(v int) *GroupCreate {
 	_c.mutation.SetSortOrder(v)
@@ -591,6 +606,10 @@ func (_c *GroupCreate) defaults() error {
 		v := group.DefaultSupportedModelScopes
 		_c.mutation.SetSupportedModelScopes(v)
 	}
+	if _, ok := _c.mutation.PromptPolicy(); !ok {
+		v := group.DefaultPromptPolicy
+		_c.mutation.SetPromptPolicy(v)
+	}
 	if _, ok := _c.mutation.SortOrder(); !ok {
 		v := group.DefaultSortOrder
 		_c.mutation.SetSortOrder(v)
@@ -674,6 +693,9 @@ func (_c *GroupCreate) check() error {
 	}
 	if _, ok := _c.mutation.SupportedModelScopes(); !ok {
 		return &ValidationError{Name: "supported_model_scopes", err: errors.New(`ent: missing required field "Group.supported_model_scopes"`)}
+	}
+	if _, ok := _c.mutation.PromptPolicy(); !ok {
+		return &ValidationError{Name: "prompt_policy", err: errors.New(`ent: missing required field "Group.prompt_policy"`)}
 	}
 	if _, ok := _c.mutation.SortOrder(); !ok {
 		return &ValidationError{Name: "sort_order", err: errors.New(`ent: missing required field "Group.sort_order"`)}
@@ -817,6 +839,10 @@ func (_c *GroupCreate) createSpec() (*Group, *sqlgraph.CreateSpec) {
 	if value, ok := _c.mutation.SupportedModelScopes(); ok {
 		_spec.SetField(group.FieldSupportedModelScopes, field.TypeJSON, value)
 		_node.SupportedModelScopes = value
+	}
+	if value, ok := _c.mutation.PromptPolicy(); ok {
+		_spec.SetField(group.FieldPromptPolicy, field.TypeJSON, value)
+		_node.PromptPolicy = value
 	}
 	if value, ok := _c.mutation.SortOrder(); ok {
 		_spec.SetField(group.FieldSortOrder, field.TypeInt, value)
@@ -1393,6 +1419,18 @@ func (u *GroupUpsert) SetSupportedModelScopes(v []string) *GroupUpsert {
 // UpdateSupportedModelScopes sets the "supported_model_scopes" field to the value that was provided on create.
 func (u *GroupUpsert) UpdateSupportedModelScopes() *GroupUpsert {
 	u.SetExcluded(group.FieldSupportedModelScopes)
+	return u
+}
+
+// SetPromptPolicy sets the "prompt_policy" field.
+func (u *GroupUpsert) SetPromptPolicy(v domain.PromptPolicy) *GroupUpsert {
+	u.Set(group.FieldPromptPolicy, v)
+	return u
+}
+
+// UpdatePromptPolicy sets the "prompt_policy" field to the value that was provided on create.
+func (u *GroupUpsert) UpdatePromptPolicy() *GroupUpsert {
+	u.SetExcluded(group.FieldPromptPolicy)
 	return u
 }
 
@@ -1973,6 +2011,20 @@ func (u *GroupUpsertOne) SetSupportedModelScopes(v []string) *GroupUpsertOne {
 func (u *GroupUpsertOne) UpdateSupportedModelScopes() *GroupUpsertOne {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdateSupportedModelScopes()
+	})
+}
+
+// SetPromptPolicy sets the "prompt_policy" field.
+func (u *GroupUpsertOne) SetPromptPolicy(v domain.PromptPolicy) *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetPromptPolicy(v)
+	})
+}
+
+// UpdatePromptPolicy sets the "prompt_policy" field to the value that was provided on create.
+func (u *GroupUpsertOne) UpdatePromptPolicy() *GroupUpsertOne {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdatePromptPolicy()
 	})
 }
 
@@ -2730,6 +2782,20 @@ func (u *GroupUpsertBulk) SetSupportedModelScopes(v []string) *GroupUpsertBulk {
 func (u *GroupUpsertBulk) UpdateSupportedModelScopes() *GroupUpsertBulk {
 	return u.Update(func(s *GroupUpsert) {
 		s.UpdateSupportedModelScopes()
+	})
+}
+
+// SetPromptPolicy sets the "prompt_policy" field.
+func (u *GroupUpsertBulk) SetPromptPolicy(v domain.PromptPolicy) *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.SetPromptPolicy(v)
+	})
+}
+
+// UpdatePromptPolicy sets the "prompt_policy" field to the value that was provided on create.
+func (u *GroupUpsertBulk) UpdatePromptPolicy() *GroupUpsertBulk {
+	return u.Update(func(s *GroupUpsert) {
+		s.UpdatePromptPolicy()
 	})
 }
 

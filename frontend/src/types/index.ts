@@ -366,6 +366,25 @@ export type GroupPlatform = 'anthropic' | 'openai' | 'gemini' | 'antigravity'
 
 export type SubscriptionType = 'standard' | 'subscription'
 
+export interface PromptPolicy {
+  enabled: boolean
+  mode?: 'prepend' | 'append' | 'replace_if_empty'
+  skill_ids?: string[]
+  skill_enforcement_mode?: 'soft' | 'strict'
+  anthropic_system_message?: string
+  openai_instructions?: string
+  gemini_system_instruction?: string
+  notes?: string
+}
+
+export interface LocalSkillSummary {
+  id: string
+  name: string
+  filename: string
+  size: number
+  updated_at: string
+}
+
 export interface Group {
   id: number
   name: string
@@ -414,6 +433,7 @@ export interface AdminGroup extends Group {
 
   // OpenAI Messages 调度配置（仅 openai 平台使用）
   default_mapped_model?: string
+  prompt_policy?: PromptPolicy
 
   // 分组排序
   sort_order: number
@@ -496,6 +516,7 @@ export interface CreateGroupRequest {
   mcp_xml_inject?: boolean
   simulate_claude_max_enabled?: boolean
   supported_model_scopes?: string[]
+  prompt_policy?: PromptPolicy
   require_oauth_only?: boolean
   require_privacy_set?: boolean
   // 从指定分组复制账号
@@ -522,6 +543,7 @@ export interface UpdateGroupRequest {
   mcp_xml_inject?: boolean
   simulate_claude_max_enabled?: boolean
   supported_model_scopes?: string[]
+  prompt_policy?: PromptPolicy
   require_oauth_only?: boolean
   require_privacy_set?: boolean
   copy_accounts_from_group_ids?: number[]

@@ -143,6 +143,14 @@ func (h *OpenAIGatewayHandler) Responses(c *gin.Context) {
 			body = normalizedCompactBody
 		}
 	}
+	if apiKey.Group != nil {
+		body, err = service.ApplyGroupPromptPolicy(body, apiKey.Group, service.PromptPolicyTargetOpenAIResponses)
+		if err != nil {
+			h.errorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to apply group prompt policy")
+			return
+		}
+		sessionHashBody = body
+	}
 
 	// 校验请求体 JSON 合法性
 	if !gjson.ValidBytes(body) {

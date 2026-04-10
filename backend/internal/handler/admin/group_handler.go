@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Wei-Shaw/sub2api/internal/domain"
 	"github.com/Wei-Shaw/sub2api/internal/handler/dto"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/timezone"
@@ -103,7 +104,8 @@ type CreateGroupRequest struct {
 	ModelRoutingEnabled bool               `json:"model_routing_enabled"`
 	MCPXMLInject        *bool              `json:"mcp_xml_inject"`
 	// 支持的模型系列（仅 antigravity 平台使用）
-	SupportedModelScopes []string `json:"supported_model_scopes"`
+	SupportedModelScopes []string            `json:"supported_model_scopes"`
+	PromptPolicy         domain.PromptPolicy `json:"prompt_policy"`
 	// OpenAI Messages 调度配置（仅 openai 平台使用）
 	AllowMessagesDispatch bool   `json:"allow_messages_dispatch"`
 	RequireOAuthOnly      bool   `json:"require_oauth_only"`
@@ -137,7 +139,8 @@ type UpdateGroupRequest struct {
 	ModelRoutingEnabled *bool              `json:"model_routing_enabled"`
 	MCPXMLInject        *bool              `json:"mcp_xml_inject"`
 	// 支持的模型系列（仅 antigravity 平台使用）
-	SupportedModelScopes *[]string `json:"supported_model_scopes"`
+	SupportedModelScopes *[]string            `json:"supported_model_scopes"`
+	PromptPolicy         *domain.PromptPolicy `json:"prompt_policy"`
 	// OpenAI Messages 调度配置（仅 openai 平台使用）
 	AllowMessagesDispatch *bool   `json:"allow_messages_dispatch"`
 	RequireOAuthOnly      *bool   `json:"require_oauth_only"`
@@ -206,6 +209,17 @@ func (h *GroupHandler) GetAll(c *gin.Context) {
 	response.Success(c, outGroups)
 }
 
+// ListLocalSkills handles listing locally mounted skills for group prompt policy.
+// GET /api/v1/admin/groups/local-skills
+func (h *GroupHandler) ListLocalSkills(c *gin.Context) {
+	skills, err := service.ListLocalSkillSummaries()
+	if err != nil {
+		response.Error(c, 500, "Failed to list local skills")
+		return
+	}
+	response.Success(c, skills)
+}
+
 // GetByID handles getting a group by ID
 // GET /api/v1/admin/groups/:id
 func (h *GroupHandler) GetByID(c *gin.Context) {
@@ -253,6 +267,7 @@ func (h *GroupHandler) Create(c *gin.Context) {
 		ModelRoutingEnabled:             req.ModelRoutingEnabled,
 		MCPXMLInject:                    req.MCPXMLInject,
 		SupportedModelScopes:            req.SupportedModelScopes,
+		PromptPolicy:                    req.PromptPolicy,
 		AllowMessagesDispatch:           req.AllowMessagesDispatch,
 		RequireOAuthOnly:                req.RequireOAuthOnly,
 		RequirePrivacySet:               req.RequirePrivacySet,
@@ -303,6 +318,7 @@ func (h *GroupHandler) Update(c *gin.Context) {
 		ModelRoutingEnabled:             req.ModelRoutingEnabled,
 		MCPXMLInject:                    req.MCPXMLInject,
 		SupportedModelScopes:            req.SupportedModelScopes,
+		PromptPolicy:                    req.PromptPolicy,
 		AllowMessagesDispatch:           req.AllowMessagesDispatch,
 		RequireOAuthOnly:                req.RequireOAuthOnly,
 		RequirePrivacySet:               req.RequirePrivacySet,

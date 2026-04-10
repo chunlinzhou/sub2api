@@ -3,6 +3,8 @@ package service
 import (
 	"strings"
 	"time"
+
+	"github.com/Wei-Shaw/sub2api/internal/domain"
 )
 
 type Group struct {
@@ -44,6 +46,9 @@ type Group struct {
 	// 支持的模型系列（仅 antigravity 平台使用）
 	// 可选值: claude, gemini_text, gemini_image
 	SupportedModelScopes []string
+
+	// 分组级 Prompt 模板注入策略
+	PromptPolicy domain.PromptPolicy
 
 	// 分组排序
 	SortOrder int

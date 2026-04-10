@@ -58,6 +58,13 @@ func (h *GatewayHandler) ChatCompletions(c *gin.Context) {
 		h.chatCompletionsErrorResponse(c, http.StatusBadRequest, "invalid_request_error", "Request body is empty")
 		return
 	}
+	if apiKey.Group != nil {
+		body, err = service.ApplyGroupPromptPolicy(body, apiKey.Group, service.PromptPolicyTargetOpenAIChatCompletions)
+		if err != nil {
+			h.chatCompletionsErrorResponse(c, http.StatusBadRequest, "invalid_request_error", "Failed to apply group prompt policy")
+			return
+		}
+	}
 
 	setOpsRequestContext(c, "", false, body)
 

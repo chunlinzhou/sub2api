@@ -1,6 +1,10 @@
 package service
 
-import "time"
+import (
+	"time"
+
+	"github.com/Wei-Shaw/sub2api/internal/domain"
+)
 
 // APIKeyAuthSnapshot API Key 认证缓存快照（仅包含认证所需字段）
 type APIKeyAuthSnapshot struct {
@@ -60,7 +64,8 @@ type APIKeyAuthGroupSnapshot struct {
 	MCPXMLInject        bool               `json:"mcp_xml_inject"`
 
 	// 支持的模型系列（仅 antigravity 平台使用）
-	SupportedModelScopes []string `json:"supported_model_scopes,omitempty"`
+	SupportedModelScopes []string            `json:"supported_model_scopes,omitempty"`
+	PromptPolicy         domain.PromptPolicy `json:"prompt_policy,omitempty"`
 
 	// OpenAI Messages 调度配置（仅 openai 平台使用）
 	AllowMessagesDispatch bool   `json:"allow_messages_dispatch"`
