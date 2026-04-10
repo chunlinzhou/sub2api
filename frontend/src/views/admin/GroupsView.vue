@@ -45,6 +45,13 @@
           <!-- Right: actions -->
           <div class="flex w-full flex-shrink-0 flex-wrap items-center justify-end gap-3 lg:w-auto">
             <button
+              @click="openLocalSkillsManager"
+              class="btn btn-secondary"
+              type="button"
+            >
+              管理 Skills
+            </button>
+            <button
               @click="loadGroups"
               :disabled="loading"
               class="btn btn-secondary"
@@ -325,9 +332,18 @@
               />
             </div>
             <div>
-              <label class="input-label">本地 Skills（可多选）</label>
+              <div class="mb-2 flex items-center justify-between gap-3">
+                <label class="input-label !mb-0">本地 Skills（可多选）</label>
+                <button
+                  type="button"
+                  class="text-xs font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+                  @click="openLocalSkillsManager"
+                >
+                  管理 Skills
+                </button>
+              </div>
               <p class="mb-2 text-xs text-gray-500 dark:text-gray-400">
-                读取服务端 `DATA_DIR/skills` 目录下的 `.md` / `.txt` 文件，按勾选顺序拼接注入
+                读取 `LOCAL_SKILLS_DIR` 指向目录下的 `.md` / `.txt` 文件；未设置时回退到 `DATA_DIR/skills`
               </p>
               <div
                 v-if="localSkillsLoading"
@@ -339,7 +355,7 @@
                 v-else-if="!localSkills.length"
                 class="rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 dark:border-dark-600 dark:text-gray-400"
               >
-                当前未发现本地 skill 文件，可先在服务端 `DATA_DIR/skills` 下放入 `.md` / `.txt` 文件
+                当前未发现本地 skill 文件，可以点击“管理 Skills”上传 `.md` / `.txt` 文件
               </div>
               <div
                 v-else
@@ -1165,9 +1181,18 @@
               />
             </div>
             <div>
-              <label class="input-label">本地 Skills（可多选）</label>
+              <div class="mb-2 flex items-center justify-between gap-3">
+                <label class="input-label !mb-0">本地 Skills（可多选）</label>
+                <button
+                  type="button"
+                  class="text-xs font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+                  @click="openLocalSkillsManager"
+                >
+                  管理 Skills
+                </button>
+              </div>
               <p class="mb-2 text-xs text-gray-500 dark:text-gray-400">
-                读取服务端 `DATA_DIR/skills` 目录下的 `.md` / `.txt` 文件，按勾选顺序拼接注入
+                读取 `LOCAL_SKILLS_DIR` 指向目录下的 `.md` / `.txt` 文件；未设置时回退到 `DATA_DIR/skills`
               </p>
               <div
                 v-if="localSkillsLoading"
@@ -1179,7 +1204,7 @@
                 v-else-if="!localSkills.length"
                 class="rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 dark:border-dark-600 dark:text-gray-400"
               >
-                当前未发现本地 skill 文件，可先在服务端 `DATA_DIR/skills` 下放入 `.md` / `.txt` 文件
+                当前未发现本地 skill 文件，可以点击“管理 Skills”上传 `.md` / `.txt` 文件
               </div>
               <div
                 v-else
@@ -1948,6 +1973,112 @@
       </template>
     </BaseDialog>
 
+    <BaseDialog
+      :show="showLocalSkillsManager"
+      title="管理本地 Skills"
+      width="normal"
+      @close="closeLocalSkillsManager"
+    >
+      <div class="space-y-5">
+        <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-3 text-sm text-gray-600 dark:border-dark-600 dark:bg-dark-800/60 dark:text-gray-300">
+          <div>支持上传和删除 `.md` / `.txt` 文件。</div>
+          <div class="mt-1">服务端优先读取 `LOCAL_SKILLS_DIR`，未设置时回退到 `DATA_DIR/skills`。</div>
+          <div class="mt-1">建议 Docker 把宿主机目录挂载到容器，再把 `LOCAL_SKILLS_DIR` 指向该挂载路径。</div>
+        </div>
+
+        <div class="rounded-lg border border-gray-200 p-4 dark:border-dark-600">
+          <div class="mb-3 text-sm font-medium text-gray-900 dark:text-gray-100">上传 Skill</div>
+          <div class="space-y-3">
+            <input
+              :key="localSkillFileInputKey"
+              type="file"
+              accept=".md,.txt,text/markdown,text/plain"
+              class="block w-full text-sm text-gray-700 file:mr-4 file:rounded-md file:border-0 file:bg-primary-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary-700 hover:file:bg-primary-100 dark:text-gray-200 dark:file:bg-primary-900/30 dark:file:text-primary-300"
+              @change="handleLocalSkillFileChange"
+            />
+            <input
+              v-model="localSkillUploadFilename"
+              type="text"
+              class="input"
+              placeholder="可选：覆盖文件名，例如 coding.md"
+            />
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+              单文件上限 256 KB；同名上传会直接覆盖原文件。
+            </p>
+            <div class="flex justify-end">
+              <button
+                type="button"
+                class="btn btn-primary"
+                :disabled="localSkillSubmitting"
+                @click="uploadLocalSkill"
+              >
+                {{ localSkillSubmitting ? '上传中...' : '上传 Skill' }}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-lg border border-gray-200 p-4 dark:border-dark-600">
+          <div class="mb-3 flex items-center justify-between gap-3">
+            <div class="text-sm font-medium text-gray-900 dark:text-gray-100">已上传 Skills</div>
+            <button
+              type="button"
+              class="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
+              :disabled="localSkillsLoading"
+              @click="loadLocalSkills"
+            >
+              刷新
+            </button>
+          </div>
+
+          <div
+            v-if="localSkillsLoading"
+            class="rounded-lg border border-dashed border-gray-300 px-3 py-4 text-sm text-gray-500 dark:border-dark-600 dark:text-gray-400"
+          >
+            正在加载本地 skills...
+          </div>
+          <div
+            v-else-if="!localSkills.length"
+            class="rounded-lg border border-dashed border-gray-300 px-3 py-4 text-sm text-gray-500 dark:border-dark-600 dark:text-gray-400"
+          >
+            还没有本地 skill 文件，先上传一个试试。
+          </div>
+          <div v-else class="space-y-2">
+            <div
+              v-for="skill in localSkills"
+              :key="skill.id"
+              class="flex items-center justify-between gap-3 rounded-lg border border-gray-200 px-3 py-3 dark:border-dark-600"
+            >
+              <div class="min-w-0">
+                <div class="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+                  {{ skill.filename }}
+                </div>
+                <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  {{ formatLocalSkillSize(skill.size) }} · 更新于 {{ formatLocalSkillTime(skill.updated_at) }}
+                </div>
+              </div>
+              <button
+                type="button"
+                class="rounded-md px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                :disabled="localSkillDeletingId === skill.id"
+                @click="requestDeleteLocalSkill(skill)"
+              >
+                {{ localSkillDeletingId === skill.id ? '删除中...' : '删除' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <div class="flex justify-end gap-3 pt-4">
+          <button type="button" class="btn btn-secondary" @click="closeLocalSkillsManager">
+            关闭
+          </button>
+        </div>
+      </template>
+    </BaseDialog>
+
     <!-- Delete Confirmation Dialog -->
     <ConfirmDialog
       :show="showDeleteDialog"
@@ -1958,6 +2089,17 @@
       :danger="true"
       @confirm="confirmDelete"
       @cancel="showDeleteDialog = false"
+    />
+
+    <ConfirmDialog
+      :show="showDeleteLocalSkillDialog"
+      title="删除本地 Skill"
+      :message="localSkillDeleteConfirmMessage"
+      :confirm-text="'删除'"
+      :cancel-text="t('common.cancel')"
+      :danger="true"
+      @confirm="confirmDeleteLocalSkill"
+      @cancel="cancelDeleteLocalSkill"
     />
 
     <!-- Sort Order Modal -->
@@ -2252,13 +2394,21 @@ const showDeleteDialog = ref(false)
 const showSortModal = ref(false)
 const submitting = ref(false)
 const sortSubmitting = ref(false)
+const showLocalSkillsManager = ref(false)
+const showDeleteLocalSkillDialog = ref(false)
 const editingGroup = ref<AdminGroup | null>(null)
 const deletingGroup = ref<AdminGroup | null>(null)
+const deletingLocalSkill = ref<LocalSkillSummary | null>(null)
 const showRateMultipliersModal = ref(false)
 const rateMultipliersGroup = ref<AdminGroup | null>(null)
 const sortableGroups = ref<AdminGroup[]>([])
 const localSkills = ref<LocalSkillSummary[]>([])
 const localSkillsLoading = ref(false)
+const localSkillSubmitting = ref(false)
+const localSkillDeletingId = ref<string | null>(null)
+const localSkillUploadFilename = ref('')
+const localSkillUploadFile = ref<File | null>(null)
+const localSkillFileInputKey = ref(0)
 
 const buildDefaultPromptPolicy = (): PromptPolicy => ({
   enabled: false,
@@ -2275,6 +2425,7 @@ const loadLocalSkills = async () => {
   localSkillsLoading.value = true
   try {
     localSkills.value = await adminAPI.groups.listLocalSkills()
+    syncPromptPolicySkillSelections()
   } catch (error) {
     console.error('Error loading local skills:', error)
     appStore.showError('加载本地 skills 失败')
@@ -2559,6 +2710,114 @@ const editForm = reactive({
   // 从分组复制账号
   copy_accounts_from_group_ids: [] as number[]
 })
+
+function syncPromptPolicySkillSelections(): void {
+  const validSkillIDs = new Set(localSkills.value.map((skill) => skill.id))
+  const filterSkillIDs = (policy: PromptPolicy) => {
+    policy.skill_ids = (policy.skill_ids || []).filter((id) => validSkillIDs.has(id))
+  }
+
+  filterSkillIDs(createForm.prompt_policy)
+  filterSkillIDs(editForm.prompt_policy)
+}
+
+function openLocalSkillsManager(): void {
+  showLocalSkillsManager.value = true
+}
+
+function resetLocalSkillUploadForm(): void {
+  localSkillUploadFile.value = null
+  localSkillUploadFilename.value = ''
+  localSkillFileInputKey.value += 1
+}
+
+function closeLocalSkillsManager(): void {
+  showLocalSkillsManager.value = false
+  resetLocalSkillUploadForm()
+}
+
+function handleLocalSkillFileChange(event: Event): void {
+  const input = event.target as HTMLInputElement | null
+  const file = input?.files?.[0] || null
+  localSkillUploadFile.value = file
+  if (file && !localSkillUploadFilename.value.trim()) {
+    localSkillUploadFilename.value = file.name
+  }
+}
+
+async function uploadLocalSkill(): Promise<void> {
+  if (!localSkillUploadFile.value) {
+    appStore.showError('请先选择要上传的 skill 文件')
+    return
+  }
+
+  localSkillSubmitting.value = true
+  try {
+    await adminAPI.groups.uploadLocalSkill(localSkillUploadFile.value, localSkillUploadFilename.value)
+    appStore.showSuccess('Skill 上传成功')
+    resetLocalSkillUploadForm()
+    await loadLocalSkills()
+  } catch (error: any) {
+    appStore.showError(error.response?.data?.detail || 'Skill 上传失败')
+    console.error('Error uploading local skill:', error)
+  } finally {
+    localSkillSubmitting.value = false
+  }
+}
+
+function formatLocalSkillSize(size: number): string {
+  if (size >= 1024 * 1024) {
+    return `${(size / 1024 / 1024).toFixed(1)} MB`
+  }
+  if (size >= 1024) {
+    return `${(size / 1024).toFixed(1)} KB`
+  }
+  return `${size} B`
+}
+
+function formatLocalSkillTime(value: string): string {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+  return date.toLocaleString()
+}
+
+function requestDeleteLocalSkill(skill: LocalSkillSummary): void {
+  deletingLocalSkill.value = skill
+  showDeleteLocalSkillDialog.value = true
+}
+
+function cancelDeleteLocalSkill(): void {
+  showDeleteLocalSkillDialog.value = false
+  deletingLocalSkill.value = null
+}
+
+const localSkillDeleteConfirmMessage = computed(() => {
+  if (!deletingLocalSkill.value) {
+    return ''
+  }
+  return `确定删除 skill 文件 “${deletingLocalSkill.value.filename}” 吗？删除后已勾选该 skill 的分组会自动取消勾选。`
+})
+
+async function confirmDeleteLocalSkill(): Promise<void> {
+  if (!deletingLocalSkill.value) {
+    return
+  }
+
+  localSkillDeletingId.value = deletingLocalSkill.value.id
+  try {
+    await adminAPI.groups.deleteLocalSkill(deletingLocalSkill.value.id)
+    appStore.showSuccess('Skill 删除成功')
+    await loadLocalSkills()
+    cancelDeleteLocalSkill()
+  } catch (error: any) {
+    appStore.showError(error.response?.data?.detail || 'Skill 删除失败')
+    console.error('Error deleting local skill:', error)
+  } finally {
+    localSkillDeletingId.value = null
+  }
+}
 
 // 根据分组类型返回不同的删除确认消息
 const deleteConfirmMessage = computed(() => {

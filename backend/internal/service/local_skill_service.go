@@ -1,12 +1,22 @@
 package service
 
 import (
+	"bytes"
+	"errors"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
+)
+
+const MaxLocalSkillSizeBytes = 256 * 1024
+
+var (
+	ErrInvalidLocalSkillName    = errors.New("invalid local skill filename")
+	ErrInvalidLocalSkillContent = errors.New("invalid local skill content")
+	ErrLocalSkillNotFound       = errors.New("local skill not found")
 )
 
 type LocalSkillSummary struct {
@@ -18,6 +28,9 @@ type LocalSkillSummary struct {
 }
 
 func LocalSkillsDir() string {
+	if dir := strings.TrimSpace(os.Getenv("LOCAL_SKILLS_DIR")); dir != "" {
+		return dir
+	}
 	return filepath.Join(localSkillsDataDir(), "skills")
 }
 
@@ -36,24 +49,61 @@ func ListLocalSkillSummaries() ([]LocalSkillSummary, error) {
 		if !isAllowedLocalSkillEntry(entry) {
 			continue
 		}
-		info, err := entry.Info()
+		summary, err := localSkillSummaryFromDirEntry(entry)
 		if err != nil {
 			return nil, err
 		}
-		filename := entry.Name()
-		skills = append(skills, LocalSkillSummary{
-			ID:        filename,
-			Name:      strings.TrimSuffix(filename, filepath.Ext(filename)),
-			Filename:  filename,
-			Size:      info.Size(),
-			UpdatedAt: info.ModTime(),
-		})
+		skills = append(skills, summary)
 	}
 
 	sort.Slice(skills, func(i, j int) bool {
 		return skills[i].Filename < skills[j].Filename
 	})
 	return skills, nil
+}
+
+func UpsertLocalSkill(filename string, content []byte) (*LocalSkillSummary, error) {
+	id, ok := normalizeLocalSkillID(filename)
+	if !ok {
+		return nil, ErrInvalidLocalSkillName
+	}
+
+	trimmed := bytes.TrimSpace(content)
+	if len(trimmed) == 0 || len(content) > MaxLocalSkillSizeBytes {
+		return nil, ErrInvalidLocalSkillContent
+	}
+
+	dir := LocalSkillsDir()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return nil, err
+	}
+
+	path := filepath.Join(dir, id)
+	if err := os.WriteFile(path, content, 0o644); err != nil {
+		return nil, err
+	}
+
+	summary, err := localSkillSummaryFromPath(path, id)
+	if err != nil {
+		return nil, err
+	}
+	return &summary, nil
+}
+
+func DeleteLocalSkill(id string) error {
+	normalizedID, ok := normalizeLocalSkillID(id)
+	if !ok {
+		return ErrInvalidLocalSkillName
+	}
+
+	path := filepath.Join(LocalSkillsDir(), normalizedID)
+	if err := os.Remove(path); err != nil {
+		if os.IsNotExist(err) {
+			return ErrLocalSkillNotFound
+		}
+		return err
+	}
+	return nil
 }
 
 func CompileLocalSkillText(skillIDs []string) string {
@@ -83,6 +133,32 @@ func CompileLocalSkillText(skillIDs []string) string {
 	}
 
 	return strings.Join(parts, "\n\n")
+}
+
+func localSkillSummaryFromDirEntry(entry os.DirEntry) (LocalSkillSummary, error) {
+	info, err := entry.Info()
+	if err != nil {
+		return LocalSkillSummary{}, err
+	}
+	return localSkillSummaryFromFileInfo(entry.Name(), info), nil
+}
+
+func localSkillSummaryFromPath(path, filename string) (LocalSkillSummary, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return LocalSkillSummary{}, err
+	}
+	return localSkillSummaryFromFileInfo(filename, info), nil
+}
+
+func localSkillSummaryFromFileInfo(filename string, info os.FileInfo) LocalSkillSummary {
+	return LocalSkillSummary{
+		ID:        filename,
+		Name:      strings.TrimSuffix(filename, filepath.Ext(filename)),
+		Filename:  filename,
+		Size:      info.Size(),
+		UpdatedAt: info.ModTime(),
+	}
 }
 
 func isAllowedLocalSkillEntry(entry os.DirEntry) bool {

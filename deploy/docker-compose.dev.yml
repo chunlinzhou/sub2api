@@ -19,6 +19,8 @@ services:
       - "${BIND_HOST:-127.0.0.1}:${SERVER_PORT:-8080}:8080"
     volumes:
       - ./data:/app/data
+      # Optional: mount an external skills directory and set LOCAL_SKILLS_DIR=/app/skills
+      # - /srv/sub2api-skills:/app/skills
     environment:
       - AUTO_SETUP=true
       - SERVER_HOST=0.0.0.0
@@ -37,6 +39,7 @@ services:
       - REDIS_DB=${REDIS_DB:-0}
       - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@sub2api.local}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - LOCAL_SKILLS_DIR=${LOCAL_SKILLS_DIR:-}
       - JWT_SECRET=${JWT_SECRET:-}
       - TOTP_ENCRYPTION_KEY=${TOTP_ENCRYPTION_KEY:-}
       - TZ=${TZ:-Asia/Shanghai}

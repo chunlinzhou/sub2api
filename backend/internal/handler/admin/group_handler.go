@@ -3,7 +3,9 @@ package admin
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 
@@ -218,6 +220,81 @@ func (h *GroupHandler) ListLocalSkills(c *gin.Context) {
 		return
 	}
 	response.Success(c, skills)
+}
+
+// UploadLocalSkill handles uploading or replacing a local skill file.
+// POST /api/v1/admin/groups/local-skills
+func (h *GroupHandler) UploadLocalSkill(c *gin.Context) {
+	fileHeader, err := c.FormFile("file")
+	if err != nil {
+		response.BadRequest(c, "File is required")
+		return
+	}
+	if fileHeader.Size <= 0 {
+		response.BadRequest(c, "File is empty")
+		return
+	}
+	if fileHeader.Size > service.MaxLocalSkillSizeBytes {
+		response.BadRequest(c, fmt.Sprintf("File too large (max %d KB)", service.MaxLocalSkillSizeBytes/1024))
+		return
+	}
+
+	file, err := fileHeader.Open()
+	if err != nil {
+		response.Error(c, 500, "Failed to open uploaded file")
+		return
+	}
+	defer func() {
+		_ = file.Close()
+	}()
+
+	content, err := io.ReadAll(io.LimitReader(file, service.MaxLocalSkillSizeBytes+1))
+	if err != nil {
+		response.Error(c, 500, "Failed to read uploaded file")
+		return
+	}
+	if len(content) > service.MaxLocalSkillSizeBytes {
+		response.BadRequest(c, fmt.Sprintf("File too large (max %d KB)", service.MaxLocalSkillSizeBytes/1024))
+		return
+	}
+
+	filename := strings.TrimSpace(c.PostForm("filename"))
+	if filename == "" {
+		filename = fileHeader.Filename
+	}
+
+	skill, err := service.UpsertLocalSkill(filename, content)
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrInvalidLocalSkillName):
+			response.BadRequest(c, "Filename must be a .md or .txt file without path separators")
+		case errors.Is(err, service.ErrInvalidLocalSkillContent):
+			response.BadRequest(c, fmt.Sprintf("File content must be non-empty and no larger than %d KB", service.MaxLocalSkillSizeBytes/1024))
+		default:
+			response.Error(c, 500, "Failed to save local skill")
+		}
+		return
+	}
+
+	response.Success(c, skill)
+}
+
+// DeleteLocalSkill handles deleting a local skill file.
+// DELETE /api/v1/admin/groups/local-skills/:id
+func (h *GroupHandler) DeleteLocalSkill(c *gin.Context) {
+	if err := service.DeleteLocalSkill(c.Param("id")); err != nil {
+		switch {
+		case errors.Is(err, service.ErrInvalidLocalSkillName):
+			response.BadRequest(c, "Invalid local skill id")
+		case errors.Is(err, service.ErrLocalSkillNotFound):
+			response.NotFound(c, "Local skill not found")
+		default:
+			response.Error(c, 500, "Failed to delete local skill")
+		}
+		return
+	}
+
+	response.Success(c, gin.H{"message": "Local skill deleted"})
 }
 
 // GetByID handles getting a group by ID

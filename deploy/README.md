@@ -124,6 +124,23 @@ When using Docker Compose with `AUTO_SETUP=true`:
    docker compose logs sub2api | grep "admin password"
    ```
 
+### Local Skills External Directory
+
+The group prompt policy page can upload and delete local `.md` / `.txt` skill files from the admin UI.
+
+By default, skills are stored in `DATA_DIR/skills`. If you want them outside the project data directory, mount a host directory into the container and point `LOCAL_SKILLS_DIR` to it:
+
+```yaml
+services:
+  sub2api:
+    volumes:
+      - /srv/sub2api-skills:/app/skills
+    environment:
+      - LOCAL_SKILLS_DIR=/app/skills
+```
+
+After restarting the container, the admin page will read and manage files from that mounted directory.
+
 ### Database Migration Notes (PostgreSQL)
 
 - Migrations are applied in lexicographic order (e.g. `001_...sql`, `002_...sql`).

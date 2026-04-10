@@ -61,6 +61,31 @@ export async function listLocalSkills(): Promise<LocalSkillSummary[]> {
   return data
 }
 
+export async function uploadLocalSkill(
+  file: File,
+  filename?: string
+): Promise<LocalSkillSummary> {
+  const formData = new FormData()
+  formData.append('file', file)
+  if (filename?.trim()) {
+    formData.append('filename', filename.trim())
+  }
+
+  const { data } = await apiClient.post<LocalSkillSummary>('/admin/groups/local-skills', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+  return data
+}
+
+export async function deleteLocalSkill(id: string): Promise<{ message: string }> {
+  const { data } = await apiClient.delete<{ message: string }>(
+    `/admin/groups/local-skills/${encodeURIComponent(id)}`
+  )
+  return data
+}
+
 /**
  * Get active groups by platform
  * @param platform - Platform to filter by
@@ -256,6 +281,8 @@ export const groupsAPI = {
   list,
   getAll,
   listLocalSkills,
+  uploadLocalSkill,
+  deleteLocalSkill,
   getByPlatform,
   getById,
   create,
