@@ -45,13 +45,6 @@
           <!-- Right: actions -->
           <div class="flex w-full flex-shrink-0 flex-wrap items-center justify-end gap-3 lg:w-auto">
             <button
-              @click="openLocalSkillsManager"
-              class="btn btn-secondary"
-              type="button"
-            >
-              管理 Skills
-            </button>
-            <button
               @click="loadGroups"
               :disabled="loading"
               class="btn btn-secondary"
@@ -337,7 +330,7 @@
                 <button
                   type="button"
                   class="text-xs font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
-                  @click="openLocalSkillsManager"
+                  @click="openSkillsManagerPage"
                 >
                   管理 Skills
                 </button>
@@ -355,7 +348,7 @@
                 v-else-if="!localSkills.length"
                 class="rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 dark:border-dark-600 dark:text-gray-400"
               >
-                当前未发现本地 skill 文件，可以点击“管理 Skills”上传 `.md` / `.txt` 文件
+                当前未发现本地 skill 文件，请先到左侧的 Skills 管理页面创建或上传。
               </div>
               <div
                 v-else
@@ -395,33 +388,6 @@
               <p class="input-hint">
                 strict 会清理用户自带的 system / developer / instructions / systemInstruction，再注入统一模板
               </p>
-            </div>
-            <div>
-              <label class="input-label">Anthropic system</label>
-              <textarea
-                v-model="createForm.prompt_policy.anthropic_system_message"
-                rows="3"
-                class="input"
-                placeholder="用于 /v1/messages 的 system 注入"
-              ></textarea>
-            </div>
-            <div>
-              <label class="input-label">OpenAI instructions / developer</label>
-              <textarea
-                v-model="createForm.prompt_policy.openai_instructions"
-                rows="3"
-                class="input"
-                placeholder="Responses 写入 instructions，Chat Completions 注入 developer 消息"
-              ></textarea>
-            </div>
-            <div>
-              <label class="input-label">Gemini systemInstruction</label>
-              <textarea
-                v-model="createForm.prompt_policy.gemini_system_instruction"
-                rows="3"
-                class="input"
-                placeholder="用于 Gemini native 请求的 systemInstruction 注入"
-              ></textarea>
             </div>
             <div>
               <label class="input-label">备注</label>
@@ -1186,7 +1152,7 @@
                 <button
                   type="button"
                   class="text-xs font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300"
-                  @click="openLocalSkillsManager"
+                  @click="openSkillsManagerPage"
                 >
                   管理 Skills
                 </button>
@@ -1204,7 +1170,7 @@
                 v-else-if="!localSkills.length"
                 class="rounded-lg border border-dashed border-gray-300 px-3 py-2 text-sm text-gray-500 dark:border-dark-600 dark:text-gray-400"
               >
-                当前未发现本地 skill 文件，可以点击“管理 Skills”上传 `.md` / `.txt` 文件
+                当前未发现本地 skill 文件，请先到左侧的 Skills 管理页面创建或上传。
               </div>
               <div
                 v-else
@@ -1244,33 +1210,6 @@
               <p class="input-hint">
                 strict 会清理用户自带的 system / developer / instructions / systemInstruction，再注入统一模板
               </p>
-            </div>
-            <div>
-              <label class="input-label">Anthropic system</label>
-              <textarea
-                v-model="editForm.prompt_policy.anthropic_system_message"
-                rows="3"
-                class="input"
-                placeholder="用于 /v1/messages 的 system 注入"
-              ></textarea>
-            </div>
-            <div>
-              <label class="input-label">OpenAI instructions / developer</label>
-              <textarea
-                v-model="editForm.prompt_policy.openai_instructions"
-                rows="3"
-                class="input"
-                placeholder="Responses 写入 instructions，Chat Completions 注入 developer 消息"
-              ></textarea>
-            </div>
-            <div>
-              <label class="input-label">Gemini systemInstruction</label>
-              <textarea
-                v-model="editForm.prompt_policy.gemini_system_instruction"
-                rows="3"
-                class="input"
-                placeholder="用于 Gemini native 请求的 systemInstruction 注入"
-              ></textarea>
             </div>
             <div>
               <label class="input-label">备注</label>
@@ -2200,6 +2139,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
 import { useOnboardingStore } from '@/stores/onboarding'
@@ -2224,6 +2164,7 @@ import { useKeyedDebouncedSearch } from '@/composables/useKeyedDebouncedSearch'
 import { getPersistedPageSize } from '@/composables/usePersistedPageSize'
 
 const { t } = useI18n()
+const router = useRouter()
 const appStore = useAppStore()
 const onboardingStore = useOnboardingStore()
 
@@ -2432,6 +2373,10 @@ const loadLocalSkills = async () => {
   } finally {
     localSkillsLoading.value = false
   }
+}
+
+const openSkillsManagerPage = () => {
+  router.push('/admin/skills')
 }
 
 const createForm = reactive({
@@ -2719,10 +2664,6 @@ function syncPromptPolicySkillSelections(): void {
 
   filterSkillIDs(createForm.prompt_policy)
   filterSkillIDs(editForm.prompt_policy)
-}
-
-function openLocalSkillsManager(): void {
-  showLocalSkillsManager.value = true
 }
 
 function resetLocalSkillUploadForm(): void {

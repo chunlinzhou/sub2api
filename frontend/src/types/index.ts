@@ -385,6 +385,10 @@ export interface LocalSkillSummary {
   updated_at: string
 }
 
+export interface LocalSkillDetail extends LocalSkillSummary {
+  content: string
+}
+
 export interface Group {
   id: number
   name: string

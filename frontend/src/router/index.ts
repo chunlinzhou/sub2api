@@ -267,6 +267,18 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: '/admin/skills',
+    name: 'AdminSkills',
+    component: () => import('@/views/admin/SkillsView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Skills Management',
+      titleKey: 'admin.skills.title',
+      descriptionKey: 'admin.skills.description'
+    }
+  },
+  {
     path: '/admin/channels',
     name: 'AdminChannels',
     component: () => import('@/views/admin/ChannelsView.vue'),

@@ -10,7 +10,8 @@ import type {
   CreateGroupRequest,
   UpdateGroupRequest,
   PaginatedResponse,
-  LocalSkillSummary
+  LocalSkillSummary,
+  LocalSkillDetail
 } from '@/types'
 
 /**
@@ -84,6 +85,22 @@ export async function deleteLocalSkill(id: string): Promise<{ message: string }>
     `/admin/groups/local-skills/${encodeURIComponent(id)}`
   )
   return data
+}
+
+export async function getLocalSkill(id: string): Promise<LocalSkillDetail> {
+  const { data } = await apiClient.get<LocalSkillDetail>(
+    `/admin/groups/local-skills/${encodeURIComponent(id)}`
+  )
+  return data
+}
+
+export async function saveLocalSkillContent(
+  filename: string,
+  content: string
+): Promise<LocalSkillSummary> {
+  const blob = new Blob([content], { type: 'text/markdown' })
+  const file = new File([blob], filename, { type: 'text/markdown' })
+  return uploadLocalSkill(file, filename)
 }
 
 /**
@@ -281,7 +298,9 @@ export const groupsAPI = {
   list,
   getAll,
   listLocalSkills,
+  getLocalSkill,
   uploadLocalSkill,
+  saveLocalSkillContent,
   deleteLocalSkill,
   getByPlatform,
   getById,

@@ -335,6 +335,7 @@ export default {
     profile: 'Profile',
     users: 'Users',
     groups: 'Groups',
+    skills: 'Skills',
     channels: 'Channels',
     subscriptions: 'Subscriptions',
     accounts: 'Accounts',
@@ -1707,6 +1708,35 @@ export default {
         geminiImage: 'Gemini Image',
         hint: 'Select at least one model family'
       }
+    },
+    skills: {
+      title: 'Skills Management',
+      description: 'Manage local skills in one place with create, upload, edit, preview, and delete support',
+      skillList: 'Skills List',
+      refresh: 'Refresh',
+      loading: 'Loading skills...',
+      empty: 'No skill files yet. Create or upload one to get started.',
+      loadingDetail: 'Loading skill content...',
+      filenamePlaceholder: 'e.g. coding.md',
+      filenameHint: 'Only .md / .txt filenames are supported. Do not include path separators.',
+      contentPlaceholder: 'Write Markdown content here...',
+      uploadFile: 'Upload File',
+      newSkill: 'New Document',
+      editTab: 'Edit',
+      previewTab: 'Preview',
+      delete: 'Delete',
+      deleting: 'Deleting...',
+      deleteTitle: 'Delete Skill',
+      deleteConfirm: 'Delete "{filename}"?',
+      filenameRequired: 'Please enter a skill filename',
+      loadFailed: 'Failed to load skills',
+      loadDetailFailed: 'Failed to load skill content',
+      uploadSuccess: 'Skill uploaded successfully',
+      uploadFailed: 'Failed to upload skill',
+      saveSuccess: 'Skill saved successfully',
+      saveFailed: 'Failed to save skill',
+      deleteSuccess: 'Skill deleted successfully',
+      deleteFailed: 'Failed to delete skill'
     },
 
     // Channel Management

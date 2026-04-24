@@ -233,6 +233,7 @@ func registerGroupRoutes(admin *gin.RouterGroup, h *handler.Handlers) {
 		groups.GET("", h.Admin.Group.List)
 		groups.GET("/all", h.Admin.Group.GetAll)
 		groups.GET("/local-skills", h.Admin.Group.ListLocalSkills)
+		groups.GET("/local-skills/:id", h.Admin.Group.GetLocalSkill)
 		groups.POST("/local-skills", h.Admin.Group.UploadLocalSkill)
 		groups.DELETE("/local-skills/:id", h.Admin.Group.DeleteLocalSkill)
 		groups.GET("/usage-summary", h.Admin.Group.GetUsageSummary)

@@ -335,6 +335,7 @@ export default {
     profile: '个人资料',
     users: '用户管理',
     groups: '分组管理',
+    skills: 'Skills 管理',
     channels: '渠道管理',
     subscriptions: '订阅管理',
     accounts: '账号管理',
@@ -1787,6 +1788,35 @@ export default {
         geminiImage: 'Gemini Image',
         hint: '至少选择一个模型系列'
       }
+    },
+    skills: {
+      title: 'Skills 管理',
+      description: '集中管理本地 skills 文件，支持新建、上传、编辑、预览和删除',
+      skillList: 'Skills 列表',
+      refresh: '刷新',
+      loading: '正在加载 skills...',
+      empty: '还没有 skill 文件，先新建或上传一个。',
+      loadingDetail: '正在加载 skill 内容...',
+      filenamePlaceholder: '例如：coding.md',
+      filenameHint: '只支持 .md / .txt 文件名，不要包含路径分隔符',
+      contentPlaceholder: '在这里输入 Markdown 内容...',
+      uploadFile: '上传文件',
+      newSkill: '新建文档',
+      editTab: '编辑',
+      previewTab: '预览',
+      delete: '删除',
+      deleting: '删除中...',
+      deleteTitle: '删除 Skill',
+      deleteConfirm: '确定删除 “{filename}” 吗？',
+      filenameRequired: '请输入 skill 文件名',
+      loadFailed: '加载 skills 列表失败',
+      loadDetailFailed: '加载 skill 内容失败',
+      uploadSuccess: 'Skill 上传成功',
+      uploadFailed: 'Skill 上传失败',
+      saveSuccess: 'Skill 保存成功',
+      saveFailed: 'Skill 保存失败',
+      deleteSuccess: 'Skill 删除成功',
+      deleteFailed: 'Skill 删除失败'
     },
 
     // Channel Management

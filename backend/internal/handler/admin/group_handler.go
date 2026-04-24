@@ -222,6 +222,27 @@ func (h *GroupHandler) ListLocalSkills(c *gin.Context) {
 	response.Success(c, skills)
 }
 
+// GetLocalSkill handles reading a local skill file.
+// GET /api/v1/admin/groups/local-skills/:id
+func (h *GroupHandler) GetLocalSkill(c *gin.Context) {
+	skill, err := service.GetLocalSkill(c.Param("id"))
+	if err != nil {
+		switch {
+		case errors.Is(err, service.ErrInvalidLocalSkillName):
+			response.BadRequest(c, "Invalid local skill id")
+		case errors.Is(err, service.ErrLocalSkillNotFound):
+			response.NotFound(c, "Local skill not found")
+		case errors.Is(err, service.ErrLocalSkillPermission):
+			response.BadRequest(c, "Local skills directory is not readable. Check LOCAL_SKILLS_DIR mount permissions (uid 1000).")
+		default:
+			response.Error(c, 500, "Failed to read local skill")
+		}
+		return
+	}
+
+	response.Success(c, skill)
+}
+
 // UploadLocalSkill handles uploading or replacing a local skill file.
 // POST /api/v1/admin/groups/local-skills
 func (h *GroupHandler) UploadLocalSkill(c *gin.Context) {

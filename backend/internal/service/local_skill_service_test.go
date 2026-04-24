@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestUpsertLocalSkillUsesExternalDirectory(t *testing.T) {
@@ -63,5 +64,30 @@ func TestDeleteLocalSkill(t *testing.T) {
 
 	if err := DeleteLocalSkill("cn.md"); err != ErrLocalSkillNotFound {
 		t.Fatalf("expected ErrLocalSkillNotFound, got %v", err)
+	}
+}
+
+func TestCompileLocalSkillTextAutoInvalidatesCacheOnFileChange(t *testing.T) {
+	skillsDir := filepath.Join(t.TempDir(), "external-skills")
+	t.Setenv("LOCAL_SKILLS_DIR", skillsDir)
+
+	if _, err := UpsertLocalSkill("probe.md", []byte("version one")); err != nil {
+		t.Fatalf("UpsertLocalSkill() error = %v", err)
+	}
+
+	first := CompileLocalSkillText([]string{"probe.md"})
+	if first != "[Skill: probe]\nversion one" {
+		t.Fatalf("unexpected first compile result: %q", first)
+	}
+
+	path := filepath.Join(skillsDir, "probe.md")
+	time.Sleep(1100 * time.Millisecond)
+	if err := os.WriteFile(path, []byte("version two"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	second := CompileLocalSkillText([]string{"probe.md"})
+	if second != "[Skill: probe]\nversion two" {
+		t.Fatalf("unexpected second compile result: %q", second)
 	}
 }

@@ -3,11 +3,15 @@ package service
 import (
 	"bytes"
 	"errors"
+	"fmt"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
+	"syscall"
 	"time"
 )
 
@@ -17,6 +21,7 @@ var (
 	ErrInvalidLocalSkillName    = errors.New("invalid local skill filename")
 	ErrInvalidLocalSkillContent = errors.New("invalid local skill content")
 	ErrLocalSkillNotFound       = errors.New("local skill not found")
+	ErrLocalSkillPermission     = errors.New("local skill directory is not writable")
 )
 
 type LocalSkillSummary struct {
@@ -25,6 +30,26 @@ type LocalSkillSummary struct {
 	Filename  string    `json:"filename"`
 	Size      int64     `json:"size"`
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+type LocalSkillDetail struct {
+	LocalSkillSummary
+	Content string `json:"content"`
+}
+
+type localSkillCacheEntry struct {
+	content         string
+	modTimeUnixNano int64
+	size            int64
+}
+
+type localSkillCache struct {
+	mu      sync.RWMutex
+	entries map[string]localSkillCacheEntry
+}
+
+var globalLocalSkillCache = &localSkillCache{
+	entries: make(map[string]localSkillCacheEntry),
 }
 
 func LocalSkillsDir() string {
@@ -75,13 +100,20 @@ func UpsertLocalSkill(filename string, content []byte) (*LocalSkillSummary, erro
 
 	dir := LocalSkillsDir()
 	if err := os.MkdirAll(dir, 0o755); err != nil {
+		if isLocalSkillPermissionErr(err) {
+			return nil, fmt.Errorf("%w: %v", ErrLocalSkillPermission, err)
+		}
 		return nil, err
 	}
 
 	path := filepath.Join(dir, id)
 	if err := os.WriteFile(path, content, 0o644); err != nil {
+		if isLocalSkillPermissionErr(err) {
+			return nil, fmt.Errorf("%w: %v", ErrLocalSkillPermission, err)
+		}
 		return nil, err
 	}
+	globalLocalSkillCache.invalidate(path)
 
 	summary, err := localSkillSummaryFromPath(path, id)
 	if err != nil {
@@ -101,9 +133,31 @@ func DeleteLocalSkill(id string) error {
 		if os.IsNotExist(err) {
 			return ErrLocalSkillNotFound
 		}
+		if isLocalSkillPermissionErr(err) {
+			return fmt.Errorf("%w: %v", ErrLocalSkillPermission, err)
+		}
 		return err
 	}
+	globalLocalSkillCache.invalidate(path)
 	return nil
+}
+
+func GetLocalSkill(id string) (*LocalSkillDetail, error) {
+	normalizedID, ok := normalizeLocalSkillID(id)
+	if !ok {
+		return nil, ErrInvalidLocalSkillName
+	}
+
+	path := filepath.Join(LocalSkillsDir(), normalizedID)
+	content, summary, err := loadLocalSkillContent(path, normalizedID)
+	if err != nil {
+		return nil, err
+	}
+
+	return &LocalSkillDetail{
+		LocalSkillSummary: summary,
+		Content:           content,
+	}, nil
 }
 
 func CompileLocalSkillText(skillIDs []string) string {
@@ -120,12 +174,12 @@ func CompileLocalSkillText(skillIDs []string) string {
 			continue
 		}
 		path := filepath.Join(dir, id)
-		content, err := os.ReadFile(path)
+		content, _, err := loadLocalSkillContent(path, id)
 		if err != nil {
 			slog.Warn("skip unreadable local skill", "skill_id", id, "path", path, "error", err)
 			continue
 		}
-		text := strings.TrimSpace(string(content))
+		text := strings.TrimSpace(content)
 		if text == "" {
 			continue
 		}
@@ -209,4 +263,76 @@ func localSkillsDataDir() string {
 	}
 
 	return "."
+}
+
+func isLocalSkillPermissionErr(err error) bool {
+	return errors.Is(err, fs.ErrPermission) ||
+		errors.Is(err, syscall.EACCES) ||
+		errors.Is(err, syscall.EPERM) ||
+		errors.Is(err, syscall.EROFS)
+}
+
+func loadLocalSkillContent(path, filename string) (string, LocalSkillSummary, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", LocalSkillSummary{}, ErrLocalSkillNotFound
+		}
+		if isLocalSkillPermissionErr(err) {
+			return "", LocalSkillSummary{}, fmt.Errorf("%w: %v", ErrLocalSkillPermission, err)
+		}
+		return "", LocalSkillSummary{}, err
+	}
+
+	summary := localSkillSummaryFromFileInfo(filename, info)
+	if content, ok := globalLocalSkillCache.get(path, info); ok {
+		return content, summary, nil
+	}
+
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			globalLocalSkillCache.invalidate(path)
+			return "", LocalSkillSummary{}, ErrLocalSkillNotFound
+		}
+		if isLocalSkillPermissionErr(err) {
+			return "", LocalSkillSummary{}, fmt.Errorf("%w: %v", ErrLocalSkillPermission, err)
+		}
+		return "", LocalSkillSummary{}, err
+	}
+
+	content := string(raw)
+	globalLocalSkillCache.set(path, info, content)
+	return content, summary, nil
+}
+
+func (c *localSkillCache) get(path string, info os.FileInfo) (string, bool) {
+	c.mu.RLock()
+	entry, ok := c.entries[path]
+	c.mu.RUnlock()
+	if !ok {
+		return "", false
+	}
+
+	if entry.modTimeUnixNano != info.ModTime().UnixNano() || entry.size != info.Size() {
+		c.invalidate(path)
+		return "", false
+	}
+	return entry.content, true
+}
+
+func (c *localSkillCache) set(path string, info os.FileInfo, content string) {
+	c.mu.Lock()
+	c.entries[path] = localSkillCacheEntry{
+		content:         content,
+		modTimeUnixNano: info.ModTime().UnixNano(),
+		size:            info.Size(),
+	}
+	c.mu.Unlock()
+}
+
+func (c *localSkillCache) invalidate(path string) {
+	c.mu.Lock()
+	delete(c.entries, path)
+	c.mu.Unlock()
 }
