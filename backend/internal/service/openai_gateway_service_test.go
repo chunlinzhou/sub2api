@@ -18,6 +18,7 @@ import (
 	"github.com/cespare/xxhash/v2"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
+	"github.com/tidwall/gjson"
 )
 
 // 编译期接口断言
@@ -1474,6 +1475,7 @@ func TestOpenAIBuildUpstreamRequestOpenAIPassthroughPreservesCompactPath(t *test
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses/compact", bytes.NewReader([]byte(`{"model":"gpt-5"}`)))
+	c.Request.Header.Set("Version", "0.125.0-alpha.3")
 
 	svc := &OpenAIGatewayService{}
 	account := &Account{Type: AccountTypeOAuth}
@@ -1482,7 +1484,7 @@ func TestOpenAIBuildUpstreamRequestOpenAIPassthroughPreservesCompactPath(t *test
 	require.NoError(t, err)
 	require.Equal(t, chatgptCodexURL+"/compact", req.URL.String())
 	require.Equal(t, "application/json", req.Header.Get("Accept"))
-	require.Equal(t, codexCLIVersion, req.Header.Get("Version"))
+	require.Equal(t, "0.125.0-alpha.3", req.Header.Get("Version"))
 	require.NotEmpty(t, req.Header.Get("Session_Id"))
 }
 
@@ -1491,6 +1493,7 @@ func TestOpenAIBuildUpstreamRequestCompactForcesJSONAcceptForOAuth(t *testing.T)
 	rec := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(rec)
 	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses/compact", bytes.NewReader([]byte(`{"model":"gpt-5"}`)))
+	c.Request.Header.Set("User-Agent", "Codex Desktop/0.125.0-alpha.3 (Mac OS 26.2.0; arm64)")
 
 	svc := &OpenAIGatewayService{}
 	account := &Account{
@@ -1502,7 +1505,8 @@ func TestOpenAIBuildUpstreamRequestCompactForcesJSONAcceptForOAuth(t *testing.T)
 	require.NoError(t, err)
 	require.Equal(t, chatgptCodexURL+"/compact", req.URL.String())
 	require.Equal(t, "application/json", req.Header.Get("Accept"))
-	require.Equal(t, codexCLIVersion, req.Header.Get("Version"))
+	require.Equal(t, "0.125.0-alpha.3", req.Header.Get("Version"))
+	require.Equal(t, "Codex Desktop/0.125.0-alpha.3 (Mac OS 26.2.0; arm64)", req.Header.Get("User-Agent"))
 	require.NotEmpty(t, req.Header.Get("Session_Id"))
 }
 
@@ -1526,6 +1530,29 @@ func TestOpenAIBuildUpstreamRequestPreservesCompactPathForAPIKeyBaseURL(t *testi
 	req, err := svc.buildUpstreamRequest(c.Request.Context(), c, account, []byte(`{"model":"gpt-5"}`), "token", false, "", false)
 	require.NoError(t, err)
 	require.Equal(t, "https://example.com/v1/responses/compact", req.URL.String())
+}
+
+func TestNormalizeOpenAICompactRequestBody_WrapsBareInputTextItems(t *testing.T) {
+	body := []byte(`{"model":"gpt-5.5","input":[{"type":"input_text","text":"Please compact this conversation."}]}`)
+
+	normalized, changed, err := NormalizeOpenAICompactRequestBodyForTest(body)
+	require.NoError(t, err)
+	require.True(t, changed)
+	require.Equal(t, "message", gjson.GetBytes(normalized, "input.0.type").String())
+	require.Equal(t, "user", gjson.GetBytes(normalized, "input.0.role").String())
+	require.Equal(t, "input_text", gjson.GetBytes(normalized, "input.0.content.0.type").String())
+	require.Equal(t, "Please compact this conversation.", gjson.GetBytes(normalized, "input.0.content.0.text").String())
+}
+
+func TestNormalizeOpenAICompactRequestBody_ConvertsLegacyTextItems(t *testing.T) {
+	body := []byte(`{"model":"gpt-5.5","input":[{"type":"text","text":"compact me"}]}`)
+
+	normalized, changed, err := NormalizeOpenAICompactRequestBodyForTest(body)
+	require.NoError(t, err)
+	require.True(t, changed)
+	require.Equal(t, "message", gjson.GetBytes(normalized, "input.0.type").String())
+	require.Equal(t, "input_text", gjson.GetBytes(normalized, "input.0.content.0.type").String())
+	require.Equal(t, "compact me", gjson.GetBytes(normalized, "input.0.content.0.text").String())
 }
 
 func TestOpenAIBuildUpstreamRequestOAuthOfficialClientOriginatorCompatibility(t *testing.T) {

@@ -65,6 +65,7 @@ var openaiAllowedHeaders = map[string]bool{
 	"content-type":          true,
 	"conversation_id":       true,
 	"user-agent":            true,
+	"version":               true,
 	"originator":            true,
 	"session_id":            true,
 	"x-codex-turn-state":    true,
@@ -80,6 +81,7 @@ var openaiPassthroughAllowedHeaders = map[string]bool{
 	"conversation_id":       true,
 	"openai-beta":           true,
 	"user-agent":            true,
+	"version":               true,
 	"originator":            true,
 	"session_id":            true,
 	"x-codex-turn-state":    true,
@@ -1175,6 +1177,46 @@ func resolveOpenAIUpstreamOriginator(c *gin.Context, isOfficialClient bool) stri
 		return "codex_cli_rs"
 	}
 	return "opencode"
+}
+
+func resolveOpenAIUpstreamVersion(c *gin.Context) string {
+	if c != nil {
+		if version := strings.TrimSpace(c.GetHeader("version")); version != "" {
+			return version
+		}
+		if userAgent := strings.TrimSpace(c.GetHeader("user-agent")); userAgent != "" {
+			if derived := parseOpenAIVersionFromUserAgent(userAgent); derived != "" {
+				return derived
+			}
+		}
+	}
+	return codexCLIVersion
+}
+
+func parseOpenAIVersionFromUserAgent(userAgent string) string {
+	ua := strings.TrimSpace(userAgent)
+	if ua == "" {
+		return ""
+	}
+	lowerUA := strings.ToLower(ua)
+	for _, prefix := range []string{"codex_cli_rs/", "codex_vscode/", "codex_app/", "codex_chatgpt_desktop/", "codex_atlas/", "codex_exec/", "codex_sdk_ts/", "codex desktop/"} {
+		idx := strings.Index(lowerUA, prefix)
+		if idx < 0 {
+			continue
+		}
+		version := strings.TrimSpace(ua[idx+len(prefix):])
+		if version == "" {
+			return ""
+		}
+		for i, r := range version {
+			switch {
+			case r == ' ' || r == ';' || r == ')' || r == '(' || r == '\t':
+				return strings.TrimSpace(version[:i])
+			}
+		}
+		return strings.TrimSpace(version)
+	}
+	return ""
 }
 
 // BindStickySession sets session -> account binding with standard TTL.
@@ -2702,7 +2744,7 @@ func (s *OpenAIGatewayService) buildUpstreamRequestOpenAIPassthrough(
 		if isOpenAIResponsesCompactPath(c) {
 			req.Header.Set("accept", "application/json")
 			if req.Header.Get("version") == "" {
-				req.Header.Set("version", codexCLIVersion)
+				req.Header.Set("version", resolveOpenAIUpstreamVersion(c))
 			}
 			if clientSessionID == "" {
 				clientSessionID = resolveOpenAICompactSessionID(c)
@@ -2740,7 +2782,7 @@ func (s *OpenAIGatewayService) buildUpstreamRequestOpenAIPassthrough(
 		req.Header.Set("user-agent", codexCLIUserAgent)
 	}
 	// OAuth 安全透传：对非 Codex UA 统一兜底，降低被上游风控拦截概率。
-	if account.Type == AccountTypeOAuth && !openai.IsCodexCLIRequest(req.Header.Get("user-agent")) {
+	if account.Type == AccountTypeOAuth && !openai.IsCodexOfficialClientRequest(req.Header.Get("user-agent")) {
 		req.Header.Set("user-agent", codexCLIUserAgent)
 	}
 
@@ -3216,7 +3258,7 @@ func (s *OpenAIGatewayService) buildUpstreamRequest(ctx context.Context, c *gin.
 		if isOpenAIResponsesCompactPath(c) {
 			req.Header.Set("accept", "application/json")
 			if req.Header.Get("version") == "" {
-				req.Header.Set("version", codexCLIVersion)
+				req.Header.Set("version", resolveOpenAIUpstreamVersion(c))
 			}
 			compactSession := resolveOpenAICompactSessionID(c)
 			req.Header.Set("session_id", isolateOpenAISessionID(apiKeyID, compactSession))
@@ -4321,7 +4363,19 @@ func normalizeOpenAICompactRequestBody(body []byte) ([]byte, bool, error) {
 		if !value.Exists() {
 			continue
 		}
-		next, err := sjson.SetRawBytes(normalized, field, []byte(value.Raw))
+		raw := []byte(value.Raw)
+		if field == "input" {
+			var changed bool
+			var err error
+			raw, changed, err = normalizeOpenAICompactInputValue(raw)
+			if err != nil {
+				return body, false, fmt.Errorf("normalize compact body %s: %w", field, err)
+			}
+			if !changed {
+				raw = []byte(value.Raw)
+			}
+		}
+		next, err := sjson.SetRawBytes(normalized, field, raw)
 		if err != nil {
 			return body, false, fmt.Errorf("normalize compact body %s: %w", field, err)
 		}
@@ -4332,6 +4386,219 @@ func normalizeOpenAICompactRequestBody(body []byte) ([]byte, bool, error) {
 		return body, false, nil
 	}
 	return normalized, true, nil
+}
+
+func normalizeOpenAICompactInputValue(raw []byte) ([]byte, bool, error) {
+	if len(bytes.TrimSpace(raw)) == 0 {
+		return raw, false, nil
+	}
+
+	var input any
+	if err := json.Unmarshal(raw, &input); err != nil {
+		return raw, false, err
+	}
+
+	normalized, changed := normalizeOpenAICompactInputNode(input)
+	if !changed {
+		return raw, false, nil
+	}
+
+	out, err := json.Marshal(normalized)
+	if err != nil {
+		return raw, false, err
+	}
+	return out, true, nil
+}
+
+func normalizeOpenAICompactInputNode(input any) (any, bool) {
+	switch v := input.(type) {
+	case string:
+		return compactUserMessage([]any{map[string]any{
+			"type": "input_text",
+			"text": v,
+		}}), true
+	case map[string]any:
+		return normalizeOpenAICompactInputObject(v)
+	case []any:
+		return normalizeOpenAICompactInputArray(v)
+	default:
+		return input, false
+	}
+}
+
+func normalizeOpenAICompactInputObject(obj map[string]any) (any, bool) {
+	if obj == nil {
+		return obj, false
+	}
+
+	if role, ok := obj["role"].(string); ok && strings.TrimSpace(role) != "" {
+		content, changed := normalizeOpenAICompactMessageContent(obj["content"])
+		next := cloneMap(obj)
+		next["type"] = "message"
+		if changed {
+			next["content"] = content
+		}
+		if _, hasType := obj["type"]; !hasType || obj["type"] != "message" {
+			return next, true
+		}
+		return next, changed
+	}
+
+	itemType, _ := obj["type"].(string)
+	switch strings.TrimSpace(itemType) {
+	case "message":
+		content, changed := normalizeOpenAICompactMessageContent(obj["content"])
+		if !changed {
+			return obj, false
+		}
+		next := cloneMap(obj)
+		next["content"] = content
+		return next, true
+	case "input_text", "text", "input_image", "input_file":
+		contentItem, changed := normalizeOpenAICompactContentItem(obj)
+		_ = changed
+		return compactUserMessage([]any{contentItem}), true
+	default:
+		return obj, false
+	}
+}
+
+func normalizeOpenAICompactInputArray(items []any) (any, bool) {
+	if len(items) == 0 {
+		return items, false
+	}
+
+	if allCompactBareContent(items) {
+		content := make([]any, 0, len(items))
+		changed := false
+		for _, item := range items {
+			switch v := item.(type) {
+			case string:
+				content = append(content, map[string]any{
+					"type": "input_text",
+					"text": v,
+				})
+				changed = true
+			case map[string]any:
+				normalized, itemChanged := normalizeOpenAICompactContentItem(v)
+				content = append(content, normalized)
+				changed = changed || itemChanged
+			default:
+				content = append(content, item)
+			}
+		}
+		_ = changed
+		return []any{compactUserMessage(content)}, true
+	}
+
+	changed := false
+	out := make([]any, 0, len(items))
+	for _, item := range items {
+		switch v := item.(type) {
+		case string:
+			out = append(out, compactUserMessage([]any{map[string]any{
+				"type": "input_text",
+				"text": v,
+			}}))
+			changed = true
+		case map[string]any:
+			normalized, itemChanged := normalizeOpenAICompactInputObject(v)
+			out = append(out, normalized)
+			changed = changed || itemChanged
+		default:
+			out = append(out, item)
+		}
+	}
+	return out, changed
+}
+
+func normalizeOpenAICompactMessageContent(content any) (any, bool) {
+	switch v := content.(type) {
+	case string:
+		return []any{map[string]any{
+			"type": "input_text",
+			"text": v,
+		}}, true
+	case []any:
+		changed := false
+		out := make([]any, 0, len(v))
+		for _, item := range v {
+			switch itemVal := item.(type) {
+			case string:
+				out = append(out, map[string]any{
+					"type": "input_text",
+					"text": itemVal,
+				})
+				changed = true
+			case map[string]any:
+				normalized, itemChanged := normalizeOpenAICompactContentItem(itemVal)
+				out = append(out, normalized)
+				changed = changed || itemChanged
+			default:
+				out = append(out, item)
+			}
+		}
+		return out, changed
+	default:
+		return content, false
+	}
+}
+
+func normalizeOpenAICompactContentItem(obj map[string]any) (map[string]any, bool) {
+	if obj == nil {
+		return obj, false
+	}
+
+	itemType, _ := obj["type"].(string)
+	if strings.TrimSpace(itemType) != "text" {
+		return obj, false
+	}
+
+	next := cloneMap(obj)
+	next["type"] = "input_text"
+	return next, true
+}
+
+func allCompactBareContent(items []any) bool {
+	if len(items) == 0 {
+		return false
+	}
+	for _, item := range items {
+		switch v := item.(type) {
+		case string:
+			continue
+		case map[string]any:
+			itemType, _ := v["type"].(string)
+			switch strings.TrimSpace(itemType) {
+			case "input_text", "text", "input_image", "input_file":
+				continue
+			default:
+				return false
+			}
+		default:
+			return false
+		}
+	}
+	return true
+}
+
+func compactUserMessage(content []any) map[string]any {
+	return map[string]any{
+		"type":    "message",
+		"role":    "user",
+		"content": content,
+	}
+}
+
+func cloneMap(src map[string]any) map[string]any {
+	if src == nil {
+		return nil
+	}
+	dst := make(map[string]any, len(src))
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
 }
 
 func resolveOpenAICompactSessionID(c *gin.Context) string {
@@ -4929,6 +5196,20 @@ func normalizeOpenAIPassthroughOAuthBody(body []byte, compact bool) ([]byte, boo
 	changed := false
 
 	if compact {
+		if input := gjson.GetBytes(normalized, "input"); input.Exists() {
+			normalizedInput, inputChanged, err := normalizeOpenAICompactInputValue([]byte(input.Raw))
+			if err != nil {
+				return body, false, fmt.Errorf("normalize passthrough body compact input: %w", err)
+			}
+			if inputChanged {
+				next, err := sjson.SetRawBytes(normalized, "input", normalizedInput)
+				if err != nil {
+					return body, false, fmt.Errorf("normalize passthrough body set compact input: %w", err)
+				}
+				normalized = next
+				changed = true
+			}
+		}
 		if store := gjson.GetBytes(normalized, "store"); store.Exists() {
 			next, err := sjson.DeleteBytes(normalized, "store")
 			if err != nil {
